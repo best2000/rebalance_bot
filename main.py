@@ -1,32 +1,45 @@
-from binance.spot import Spot
 import os
-import time
 import dotenv
+import requests
+import hashlib
+import hmac
+import json
+import datetime
+from urllib.parse import urlencode
 
 dotenv.load_dotenv('.env')
 api_key = os.environ.get("API_KEY")
 secret_key = os.environ.get("SECRET_KEY")
 
 
-client = Spot(key=api_key, secret=secret_key,
-              base_url="https://api.binance.com", timeout=3)
-print(client.time())
+def req(method, url, params={}):
+    # signature
+    servertime = requests.get(
+        "https://api.binance.com/api/v3/time").json()['serverTime']
+    params['timestamp'] = servertime
+    _params = urlencode(params)
+    # hmac
+    hashedsig = hmac.new(secret_key.encode('utf-8'), _params.encode('utf-8'),
+                         hashlib.sha256).hexdigest()
+    params['signature'] = hashedsig
 
-# Get account information
-print(client.account())
+    # request
+    match method:
+        case "GET":
+            res = requests.get(url, params=params, headers={
+                               "X-MBX-APIKEY": api_key})
+        case "POST":
+            res = requests.post(url, params=params, headers={
+                "X-MBX-APIKEY": api_key})
+    return res.json()
 
-"""
-base_url="https://testnet.binance.vision"
-# Post a new order
-params = {
-    'symbol': 'BTCUSDT',
-    'side': 'SELL',
-    'type': 'LIMIT',
-    'timeInForce': 'GTC',
-    'quantity': 0.002,
-    'price': 9500
-}
 
-response = client.new_order(**params)
-print(response)
-"""
+balances = req("GET", "https://api.binance.com/api/v3/account")['balances']
+for i in balances:
+    if i['asset'] == "BUSD":
+        print(i)
+
+test_order = req(
+    "POST", "https://api.binance.com/api/v3/order/test",
+    {"symbol": "KDABUSD", "side": "BUY", "type": "MARKET", "quoteOrderQty": 100})
+print(test_order)
