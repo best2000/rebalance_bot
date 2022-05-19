@@ -7,79 +7,62 @@ import time
 from urllib.parse import urlencode
 import typer
 
-dotenv.load_dotenv('.env')
 
-base_url = "https://api.binance.com"
-api_key = os.environ.get("API_KEY")
-secret_key = os.environ.get("SECRET_KEY")
+def rebalance_stable_5050(base_url: str, api_key: str, secret_key: str,  symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float):
+    def req(method: str, url: str, params: dict[object, object] = {}, **kwargs):
+        if 'auth' not in kwargs:
+            kwargs['auth'] = False
 
-base_url_testnet = "https://testnet.binance.vision"
-api_key_testnet = "32GVaaDL8rmcsOgtaoDf4WYHR5r3CB2FItkZctSgdrjEvTABTb7K3IaKaouT423K"
-secret_key_testnet = "etctgwTsXj3XgYZ51hsvU2aensT17OR0eGO1tVVD4v1gsrC68LM3ZSPbHr3OAOBi"
-
-def req(method: str, url: str, params: dict[object, object] = {}, **kwargs):
-    if 'auth' not in kwargs:
-        kwargs['auth'] = False
-
-    if kwargs['auth'] == True:
-        # signature
-        servertime = requests.get(
-            base_url+"/api/v3/time").json()['serverTime']
-        params['timestamp'] = servertime
-        _params = urlencode(params)
-        # hmac
-        hashedsig = hmac.new(secret_key.encode('utf-8'), _params.encode('utf-8'),
-                             hashlib.sha256).hexdigest()
-        params['signature'] = hashedsig
-    # request
-    match method:
-        case "GET":
-            res = requests.get(url, params=params, headers={
-                               "X-MBX-APIKEY": api_key})
-        case "POST":
-            res = requests.post(url, params=params, headers={
-                "X-MBX-APIKEY": api_key})
-    res = res.json()
-    if "code" in res and res['code'] != 200:
-        print(res, end="\n\n")
-    return res
-
-def get_balances(symbols: str):
-    res = req("GET", base_url + "/api/v3/account", {}, auth=True)
-    balances = res['balances']
-    balances_dict = {}
-    for s in symbols:
-        for a in balances:
-            if a['asset'] == s:
-                balances_dict[s] = a
-    return balances_dict
-
-
-def new_order(symbol: str, side: str, type: str, **kwargs):
-    if type == "MARKET":
-        if 'quantity' not in kwargs and 'quoteOrderQty' not in kwargs:
-            raise Exception("require quantity || quoteOrderQty")
-        res = req(
-            "POST", base_url+"/api/v3/order",
-            {"symbol": symbol, "side": side, "type": type, "quoteOrderQty": kwargs['quoteOrderQty']}, auth=True)
+        if kwargs['auth'] == True:
+            # signature
+            servertime = requests.get(
+                "https://api.binance.com/api/v3/time").json()['serverTime']
+            params['timestamp'] = servertime
+            _params = urlencode(params)
+            # hmac
+            hashedsig = hmac.new(secret_key.encode('utf-8'), _params.encode('utf-8'),
+                                 hashlib.sha256).hexdigest()
+            params['signature'] = hashedsig
+        # request
+        match method:
+            case "GET":
+                res = requests.get(url, params=params, headers={
+                    "X-MBX-APIKEY": api_key})
+            case "POST":
+                res = requests.post(url, params=params, headers={
+                    "X-MBX-APIKEY": api_key})
+        res = res.json()
+        if "code" in res and res['code'] != 200:
+            print(res, end="\n\n")
         return res
 
-    if type == "LIMIT":
-        if 'timeInForce' not in kwargs or 'quantity' not in kwargs or 'price' not in kwargs:
-            raise Exception("require timeInForce & quantity & price")
-        res = req(
-            "POST", base_url+"/api/v3/order",
-            {"symbol": symbol, "side": side, "type": type, "timeInForce": kwargs['timeInForce'], "quantity": kwargs['quantity'], "price": kwargs['price']}, auth=True)
-        return res
+    def get_balances(symbols: str):
+        res = req("GET", base_url + "/api/v3/account", {}, auth=True)
+        balances = res['balances']
+        balances_dict = {}
+        for s in symbols:
+            for a in balances:
+                if a['asset'] == s:
+                    balances_dict[s] = a
+        return balances_dict
 
+    def new_order(symbol: str, side: str, type: str, **kwargs):
+        if type == "MARKET":
+            if 'quantity' not in kwargs and 'quoteOrderQty' not in kwargs:
+                raise Exception("require quantity || quoteOrderQty")
+            res = req(
+                "POST", base_url+"/api/v3/order",
+                {"symbol": symbol, "side": side, "type": type, "quoteOrderQty": kwargs['quoteOrderQty']}, auth=True)
+            return res
 
-def get_candles(symbol: str, timeframe: str = '1h', limit: int = 500):  # 1h 4h 1d
-    candles = req("GET", base_url+"/api/v3/klines",
-                  {"symbol": symbol, "limit": limit, "interval": timeframe})
-    return candles  # candles[-1] is newest
+        if type == "LIMIT":
+            if 'timeInForce' not in kwargs or 'quantity' not in kwargs or 'price' not in kwargs:
+                raise Exception("require timeInForce & quantity & price")
+            res = req(
+                "POST", base_url+"/api/v3/order",
+                {"symbol": symbol, "side": side, "type": type, "timeInForce": kwargs['timeInForce'], "quantity": kwargs['quantity'], "price": kwargs['price']}, auth=True)
+            return res
 
-
-def rebalance_stable_5050(symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float):
     # account balance setup
     binance_balances = get_balances([symbol_stable, symbol_asset])
     binance_asset_balance = float(binance_balances[symbol_asset]['free'])
@@ -135,14 +118,23 @@ def rebalance_stable_5050(symbol_asset: str, asset_balance: float, symbol_stable
 
 app = typer.Typer()
 
+
 @app.command()
-def stable5050(symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float, testnet: bool=True):
+def stable5050(symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float, testnet: bool = True):
+    dotenv.load_dotenv('.env')
+    base_url = "https://api.binance.com"
+    api_key = os.environ.get("API_KEY")
+    secret_key = os.environ.get("SECRET_KEY")
+    base_url_testnet = "https://testnet.binance.vision"
+    api_key_testnet = "32GVaaDL8rmcsOgtaoDf4WYHR5r3CB2FItkZctSgdrjEvTABTb7K3IaKaouT423K"
+    secret_key_testnet = "etctgwTsXj3XgYZ51hsvU2aensT17OR0eGO1tVVD4v1gsrC68LM3ZSPbHr3OAOBi"
     if testnet:
         base_url = base_url_testnet
         api_key = api_key_testnet
         secret_key = secret_key_testnet
-    #rebalance_stable_5050("BNB", 0, "USDT", 300)
-    print(get_balances(['BUSD']))
+    rebalance_stable_5050(base_url, api_key, secret_key,
+                          symbol_asset, asset_balance, symbol_stable, stable_balance)
+
 
 if __name__ == "__main__":
     app()
