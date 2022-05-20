@@ -148,5 +148,5 @@ if __name__ == "__main__":
     app()
 
 #tenical analysis + percentage rebalance(>10%, 5%)
-#ema 30 50 (trading ciew)
+#ema 30 50 (trading ciew) stoch rsi(<>70 && cross) + rsi(<>50)
 #EMA 10 ตัดกับ EMA 21  หากเส้น EMA 10 ตัดขึ้นซื้อเพิ่มเพราะมันลงมาสุดแล้ว ส่วน EMA 10 ตัดลงเราก็ขาย เพราะมันขึ้นมาสุดแล้ว โดยใช้ TIME FRAME DAY
