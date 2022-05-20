@@ -77,10 +77,7 @@ def new_order(symbol: str, side: str, type: str, **kwargs):
         return res
 
 
-def get_candles(symbol: str, timeframe: str = '1h', limit: int = 500):  # 1h 4h 1d
-    candles = req("GET", base_url+"/api/v3/klines",
-                  {"symbol": symbol, "limit": limit, "interval": timeframe})
-    return candles  # candles[-1] is newest
+
 
 
 def rebalance_stable_5050(symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float):
