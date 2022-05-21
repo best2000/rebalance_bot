@@ -5,19 +5,29 @@ import hashlib
 import hmac
 import time
 from urllib.parse import urlencode
-import typer
+from configparser import ConfigParser
 
-dotenv.load_dotenv('.env')
-api_key = os.environ.get("API_KEY")
-secret_key = os.environ.get("SECRET_KEY")
-api_key_testnet = "32GVaaDL8rmcsOgtaoDf4WYHR5r3CB2FItkZctSgdrjEvTABTb7K3IaKaouT423K"
-secret_key_testnet = "etctgwTsXj3XgYZ51hsvU2aensT17OR0eGO1tVVD4v1gsrC68LM3ZSPbHr3OAOBi"
+# load config.ini
+config = ConfigParser().read('./config.ini')
 
-base_url = "https://api.binance.com"
-base_url_testnet = "https://testnet.binance.vision"
-base_url = base_url_testnet
-api_key = api_key_testnet
-secret_key = secret_key_testnet
+# settings
+if bool(config['binance']['testnet']) == True:
+    base_url = config['binance']['testnet_url']
+    api_key = config['binance']['api_key_testnet']
+    secret_key = config['binance']['secret_key_testnet']
+else:
+    # load .env
+    dotenv.load_dotenv('.env')
+    base_url = config['binance']['url']
+    api_key = os.environ.get("API_KEY")
+    secret_key = os.environ.get("SECRET_KEY")
+# duo mode setup
+asset_symbol = config['duo']['asset_symbol']
+asset_balance = float(config['duo']['asset_balance'])
+asset_percentage = float(config['duo']['asset_percentage'])
+stable_asset_symbol = config['duo']['stable_asset_symbol']
+stable_asset_balance = float(config['duo']['stable_asset_balance'])
+symbol = asset_symbol+stable_asset_symbol
 
 
 def req(method: str, url: str, params: dict[object, object] = {}, **kwargs):
@@ -77,73 +87,54 @@ def new_order(symbol: str, side: str, type: str, **kwargs):
         return res
 
 
+# real account balance check
+binance_balances = get_balances([stable_asset_symbol, asset_symbol])
+binance_asset_balance = float(binance_balances[asset_symbol]['free'])
+binance_stable_asset_balance = float(binance_balances[stable_asset_symbol]['free'])
+if binance_asset_balance < asset_balance or binance_stable_asset_balance < stable_asset_balance:
+    raise Exception("account balance not enough")
 
+print("Binance Spot Account Balance\n{}: {}\n{}: {}\n".format(asset_symbol,
+                                                              binance_asset_balance, stable_asset_symbol, binance_stable_asset_balance))
+print("Configured Balance\n{}: {}\n{}: {}\n".format(asset_symbol,
+                                               asset_balance, stable_asset_symbol, stable_asset_balance))
 
+while(1):
+    # check exhange pair
+    exchange_info = req("GET", base_url+"/api/v3/exchangeInfo",
+                        {"symbol": symbol})['symbols'][0]
+    symbol_status = exchange_info['status']
 
-def rebalance_stable_5050(symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float):
-    # account balance setup
-    binance_balances = get_balances([symbol_stable, symbol_asset])
-    binance_asset_balance = float(binance_balances[symbol_asset]['free'])
-    binance_stable_balance = float(binance_balances[symbol_stable]['free'])
-    if binance_asset_balance < asset_balance or binance_stable_balance < stable_balance:
-        raise Exception("account balance not enough")
+    if symbol_status != "TRADING":
+        raise Exception("binance suspended trading!")
 
-    print("Binance Spot Account Balance\n{}: {}\n{}: {}\n".format(symbol_asset,
-                                                                  binance_asset_balance, symbol_stable, binance_stable_balance))
-    print("Setup Balance\n{}: {}\n{}: {}\n".format(symbol_asset,
-                                                   asset_balance, symbol_stable, stable_balance))
+    print("{}: {}\n{}: {}".format(asset_symbol,
+          round(asset_balance, 8), stable_asset_symbol, stable_asset_balance))
 
-    while(1):
-        # check exhange pair
-        symbol = symbol_asset+symbol_stable
-        exchange_info = req("GET", base_url+"/api/v3/exchangeInfo",
-                            {"symbol": symbol})['symbols'][0]
-        symbol_status = exchange_info['status']
+    # calculate rebalance value
+    asset_price = float(req("GET", base_url+"/api/v3/ticker/price",
+                             {"symbol": symbol})['price'])
+    asset_current_value = asset_balance*asset_price
 
-        if symbol_status != "TRADING":
-            raise Exception("binance suspended trading!")
+    rebalanced_value = int((asset_current_value+stable_asset_balance)*(asset_percentage/100))
 
-        print("{}: {}\n{}: {}".format(symbol_asset,
-              round(asset_balance, 8), symbol_stable, stable_balance))
+    print("position_value: {}\nrebalanced_value: {}".format(
+        rebalanced_value*2, rebalanced_value))
 
-        # calculate rebalance value
-        asset_price = float(req("GET", base_url+"/api/v3/ticker/price",
-                                {"symbol": symbol})['price'])
-        asset_current_value = asset_balance*asset_price
-        rebalanced_value = int((asset_current_value+stable_balance)/2)
+    # rebalance trade conditions
+    value_delta = int(asset_current_value-rebalanced_value)
+    print("value_delta: {}".format(value_delta))
+    if abs(value_delta) > 30:
+        if value_delta < 0:
+            order = new_order(symbol, "BUY", "MARKET",
+                              quoteOrderQty=abs(value_delta))
+            asset_balance = rebalanced_value/asset_price
+            stable_asset_balance = rebalanced_value
+        elif value_delta > 0:
+            order = new_order(symbol, "SELL", "MARKET",
+                              quoteOrderQty=abs(value_delta))
+            asset_balance = rebalanced_value/asset_price
+            stable_asset_balance = rebalanced_value
 
-        print("position_value: {}\nrebalanced_value: {}".format(
-            rebalanced_value*2, rebalanced_value))
-
-        # rebalance trade conditions
-        value_delta = int(asset_current_value-rebalanced_value)
-        print("value_delta: {}".format(value_delta))
-        if abs(value_delta) > 30:
-            if value_delta < 0:
-                order = new_order(symbol, "BUY", "MARKET",
-                                  quoteOrderQty=abs(value_delta))
-                asset_balance = rebalanced_value/asset_price
-                stable_balance = rebalanced_value
-            elif value_delta > 0:
-                order = new_order(symbol, "SELL", "MARKET",
-                                  quoteOrderQty=abs(value_delta))
-                asset_balance = rebalanced_value/asset_price
-                stable_balance = rebalanced_value
-
-        print()
-        time.sleep(60)
-
-
-app = typer.Typer()
-
-
-@app.command()
-def stable5050(symbol_asset: str, asset_balance: float, symbol_stable: str, stable_balance: float):
-    rebalance_stable_5050(symbol_asset, asset_balance, symbol_stable, stable_balance)
-
-if __name__ == "__main__":
-    app()
-
-#tenical analysis + percentage rebalance(>10%, 5%)
-#ema 30 50 (trading ciew) stoch rsi(<>70 && cross) + rsi(<>50)
-#EMA 10 ตัดกับ EMA 21  หากเส้น EMA 10 ตัดขึ้นซื้อเพิ่มเพราะมันลงมาสุดแล้ว ส่วน EMA 10 ตัดลงเราก็ขาย เพราะมันขึ้นมาสุดแล้ว โดยใช้ TIME FRAME DAY
+    print()
+    time.sleep(60)
