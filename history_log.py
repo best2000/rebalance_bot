@@ -1,20 +1,20 @@
 import pandas
 
-columns = {"Time": [], "Type": [], "Asset price": [], "Trade value": [],
-           "Asset ratio": [], "Asset balance": [], "Stable asset balance": [], "Position value": []}
+columns = {"time": [], "symbol": [], "type": [], "asset_price": [], "price_pct_change": [], "trade_value": [],
+           "asset_ratio": [], "asset_balance": [], "stable_asset_balance": [], "position_value": []}
 df = pandas.DataFrame(columns)
 
-def add_row(time: int, type: str, ass_price: float, trade_val: float, ass_ratio: float, ass_balance: float, sta_balance: float, pos_val: float):
+def add_row(time: str, symbol: str, type: str, ass_price: float, asset_price_pct_change: float, trade_val: float, ass_ratio: float, ass_balance: float, sta_balance: float, pos_val: float):
     global df
-    row = {"Time": time, "Type": type, "Asset price": ass_price, "Trade value": trade_val,
-           "Asset ratio": ass_ratio, "Asset balance": ass_balance, "Stable asset balance": sta_balance, "Position value": pos_val}
+    row = {"time": time, "symbol": symbol, "type": type, "asset_price": ass_price, "price_pct_change": asset_price_pct_change, "trade_value": trade_val,
+           "asset_ratio": ass_ratio, "asset_balance": ass_balance, "stable_asset_balance": sta_balance, "position_value": pos_val}
     df = df.append(row, ignore_index=True)
+
 
 def write_csv():
     global df
     df.to_csv("history_log.csv")
 
 
-#add_row(1122312,"sell",15.21,123.0,0.5,12.0,45.0,67.0)
-#print(df)
+#add_row("tiejhj", "symbol", "BUY", 10.35, 15.2,102.3, 0.5, 102.69, 154.521, 156.7)
 #write_csv()
