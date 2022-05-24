@@ -112,6 +112,10 @@ last_re_price = asset_start_price
 
 first_re = int(config['duo_mode']['first_re'])
 
+print("asset_start_price:", asset_start_price)
+print("rebalance_trig_pct:", rebalance_trig_pct)
+print("rebalance_trig_pct_price_range:", rebalance_trig_pct_price_range)
+
 while(1):
     # re config
     config.read('config.ini')
