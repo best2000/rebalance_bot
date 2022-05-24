@@ -109,7 +109,8 @@ rebalance_trig_pct_price_range = round(
     rebalance_trig_pct/100*asset_start_price, 2)
 
 last_re_price = asset_start_price
-first_re = 1
+
+first_re = int(config['duo_mode']['first_re'])
 
 while(1):
     # re config
