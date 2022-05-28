@@ -1,64 +1,174 @@
-from matplotlib import style
-import requests
-import time
-import pandas
+import pandas as pd
 import ta
 import mplfinance as mpf
+import requests
 
-# return finished caldles only (no current candle)
 
-
-def get_candles(symbol: str, timeframe: str = '1h', limit: int = 500):  # 1h 4h 1d
+def get_candles(symbol: str, timeframe: str, limit: int = 1000):  # 1h 4h 1d
     candles = requests.get("https://api.binance.com/api/v3/klines",
-                           params={"symbol": symbol, "limit": limit, "interval": timeframe})
-    return candles  # candles[-1] is newest (not current)
-
-
-def cal_tech(df):
-    # df['K'] = ta.momentum.stoch(
-    # df['High'], df['Low'], df['Close'], window=14, smooth_window=3)
-    #df['D'] = df['K'].rolling(3).mean()
-    df['rsi'] = ta.momentum.rsi(df['Close'], window=14)
-    # atr = ta.volatility.AverageTrueRange(
-    #   df['High'], df['Low'], df['Close'], window=14)
-    #df['atr'] = atr.average_true_range()
-    #ema50 = ta.trend.EMAIndicator(df['Close'], window=50)
-    #df['ema50'] = ema50.ema_indicator()
-    #ema100 = ta.trend.EMAIndicator(df['Close'], window=100)
-    #df['ema100'] = ema100.ema_indicator()
-    df.dropna(inplace=True)
+                           params={"symbol": symbol, "limit": limit, "interval": timeframe}).json()
+    df = pd.DataFrame(candles).iloc[0:-1, 0:6]
+    df.columns = ['datetime', 'open', 'high', 'low', 'close', 'volume']
+    df = df.astype(float)
+    df['datetime'] = pd.to_datetime(df['datetime'], unit='ms')
+    #df = df.set_index('time')
+    #df.index = pandas.to_datetime(df.index, unit='ms')
     return df
 
 
-def plot(df):
-    # vlines = dict(vlines=['2022-04-30 15:00:00',
-    #         '2022-05-20 15:00:00'], linewidths=(1))
-    # print(vlines)
-    #alines_points = [('2022-04-30 15:00:00', 24.178654), ('2022-05-20 15:00:00', 39.397142)]
-    mpf.plot(df, type='candle', volume=False, style='yahoo')
+# bottop finder ema cross + backtrack rsi
+def signal_1(df: pd.DataFrame, rsi_length: int = 14, ema1_length: int = 10, ema2_length: int = 16, reversal_check_length: int = 50):
+    # calculate indicator
+    df['rsi'] = ta.momentum.rsi(df['close'], window=rsi_length)
+    ema1 = ta.trend.EMAIndicator(df['close'], window=ema1_length)
+    df['ema1'] = ema1.ema_indicator()
+    ema2 = ta.trend.EMAIndicator(df['close'], window=ema2_length)
+    df['ema2'] = ema2.ema_indicator()
+    # df.dropna(inplace=True)
+
+    # signal
+    ema_cross = []
+    for i, r in df.iterrows():
+        # check ema cross
+        if i > 0:  # skip index 0
+            ema1_last = df.iloc[i-1, 7]
+            ema2_last = df.iloc[i-1, 8]
+            # cross up = 1
+            if (ema1_last < ema2_last) & (r['ema1'] > r['ema2']):
+                ema_cross.append(1)
+            # cross down = 2
+            elif (ema1_last > ema2_last) & (r['ema1'] < r['ema2']):
+                ema_cross.append(2)
+            else:
+                ema_cross.append(0)
+        else:
+            ema_cross.append(0)
+    df['ema_cross'] = pd.Series(ema_cross)
+    # reversal
+    reversal = []
+    for i, r in df.iterrows():
+        if (r['ema_cross'] == 1) & (i > reversal_check_length):  # down => up
+            for j in range(i-reversal_check_length, i):
+                if (df.iloc[j, 6] < 30):  # up
+                    reversal.append(1)
+                    break
+                if (j == i-1):
+                    reversal.append(0)
+        elif (r['ema_cross'] == 2) & (i > reversal_check_length):  # up => down
+            for j in range(i-reversal_check_length, i):
+                if (df.iloc[j, 6] > 70):
+                    reversal.append(2)  # down
+                    break
+                if (j == i-1):
+                    reversal.append(0)
+        else:
+            reversal.append(0)
+    df['reversal'] = pd.Series(reversal)
+    return df
+
+# bottop finder aroon + backtrack rsi
 
 
-def check_ta(symbol:str, timeframe:str):
-    candles = get_candles(symbol, timeframe, 1000).json()
-    df = pandas.DataFrame(candles).iloc[0:-1, 0:7]
-    df.columns = ['Open time', 'Open', 'High',
-                  'Low', 'Close', 'Volume', 'Close Time']
-    df = df.set_index('Open time')
-    df = df.astype(float)
-    df.index = pandas.to_datetime(df.index, unit='ms')
-    df['Close Time'] = pandas.to_datetime(df['Close Time'], unit='ms')
-    df = cal_tech(df)
-    signal = df.query('(rsi > 70 ) | (rsi < 30)')
-    if signal.iloc[-1]['Close Time'] == df.iloc[-1]['Close Time']:
+def signal_2(df: pd.DataFrame, rsi_length: int = 14, arn_length: int = 25, reversal_check_length: int = 40, vortex_length: int = 20):
+    # calculate indicator
+    df['rsi'] = ta.momentum.rsi(df['close'], window=rsi_length)
+    arn = ta.trend.AroonIndicator(df['close'], window=arn_length)
+    df['arn_up'] = arn.aroon_up()
+    df['arn_down'] = arn.aroon_down()
+    ema1 = ta.trend.EMAIndicator(df['close'], window=100)
+    df['ema1'] = ema1.ema_indicator()
+    ema2 = ta.trend.EMAIndicator(df['close'], window=200)
+    df['ema2'] = ema2.ema_indicator()
+    vt = ta.trend.VortexIndicator(
+        df['high'], df['low'], df['close'], window=vortex_length)
+    df['vt_pos'] = vt.vortex_indicator_pos()
+    df['vt_neg'] = vt.vortex_indicator_neg()
+    atr = ta.volatility.AverageTrueRange(
+        df['high'], df['low'], df['close'], window=14)
+    df['atr'] = atr.average_true_range()
+
+    # signal
+    arn_cross = []
+    for i, r in df.iterrows():
+        # check ema cross
+        if i > 0:  # skip index 0
+            arn_up_l = df.iloc[i-1, 7]
+            arn_down_l = df.iloc[i-1, 8]
+            # cross up > down = 1
+            if (arn_up_l < arn_down_l) & (r['arn_up'] > r['arn_down']):
+                arn_cross.append(1)
+            # cross down > up = 2
+            elif (arn_up_l > arn_down_l) & (r['arn_up'] < r['arn_down']):
+                arn_cross.append(2)
+            else:
+                arn_cross.append(0)
+        else:
+            arn_cross.append(0)
+    df['arn_cross'] = pd.Series(arn_cross)
+    # reversal
+    reversal = []
+    for i, r in df.iterrows():
+        if (r['arn_cross'] == 1) & (i > reversal_check_length):  # down => up
+            for j in range(i-reversal_check_length, i):
+                if (df.iloc[j, 6] < 30):  # up
+                    reversal.append(1)
+                    break
+                if (j == i-1):
+                    reversal.append(0)
+        elif (r['arn_cross'] == 2) & (i > reversal_check_length):  # up => down
+            for j in range(i-reversal_check_length, i):
+                if (df.iloc[j, 6] > 70):
+                    reversal.append(2)  # down
+                    break
+                if (j == i-1):
+                    reversal.append(0)
+        else:
+            reversal.append(0)
+    df['reversal'] = pd.Series(reversal)
+    return df
+
+
+def plot(df: pd.DataFrame, symbol: str, timeframe: str):
+    # setup
+    sig_up = df.query('reversal == 1')
+    sig_down = df.query('reversal == 2')
+    vl_up = dict(
+        vlines=sig_up["datetime"].tolist(), linewidths=1, colors='g')
+    vl_down = dict(
+        vlines=sig_down["datetime"].tolist(), linewidths=1, colors='r')
+    df = df.set_index('datetime')
+
+    # style
+    # Create my own `marketcolors` to use with the `nightclouds` style:
+    mc = mpf.make_marketcolors(up='#00ff00', down='#ff00ff', inherit=True)
+
+    # Create a new style based on `nightclouds` but with my own `marketcolors`:
+    s = mpf.make_mpf_style(
+        base_mpl_style=['dark_background', 'bmh'], marketcolors=mc)
+
+    # Plot
+    mpf.plot(df, type='line', volume=False,
+             title="\n"+symbol+" "+timeframe+"\nBottom Signals", style=s, vlines=vl_up)
+    mpf.plot(df, type='line', volume=False,
+             title="\n"+symbol+" "+timeframe+"\nTop Signals", style=s, vlines=vl_down)
+
+
+def check_ta(symbol: str, timeframe: str):
+    if True:
         return True
-    return False
+    else:
+        return False
 
-#print(check_ta())
+
+symbol = "BTCUSDT"
+timeframe = '4h'
+df = get_candles(symbol, timeframe, 4000)
+# print(df)
+#df = signal_1(df, 14, 10, 15, 50)
+df = signal_2(df, 17, 18, 30)
+# df.to_csv("t.csv")
+print(df)
+plot(df, symbol, timeframe)
 
 
-# dynamic ratio (asset confident++)
-# trend down => adjust more asset ratio => buy more asset
-# trend up => adjust less asset ratio => take some profit
-# rebalance => down > (2atr/price)% & stoch < 80 & rsi < 30
-# rebalance => up > (2atr/price)% & stoch > 80 & rsi > 70
-# TREND CHECK EMA 50 & EMA 100 if down trend rebalance only on the way down if recover and trend up rebalance when price higher than started balance
+# EMA10 & 15 cross + rsi backward check + chg%

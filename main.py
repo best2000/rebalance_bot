@@ -73,16 +73,6 @@ def get_balances(symbols: str):
     return balances_dict
 
 
-def new_order(symbol: str, side: str, type: str, **kwargs):
-    if type == "LIMIT":
-        if 'timeInForce' not in kwargs or 'quantity' not in kwargs or 'price' not in kwargs:
-            raise Exception("require timeInForce & quantity & price")
-        res = req(
-            "POST", base_url+"/api/v3/order",
-            {"symbol": symbol, "side": side, "type": type, "timeInForce": kwargs['timeInForce'], "quantity": kwargs['quantity'], "price": kwargs['price']}, auth=True)
-        return res
-
-
 # real account balance check
 binance_balances = get_balances([stable_asset_symbol, asset_symbol])
 binance_asset_balance = float(binance_balances[asset_symbol]['free'])
@@ -135,7 +125,7 @@ while(1):
             raise Exception("binance suspended trading!")
 
         print("{}: {}\n{}: {}".format(asset_symbol,
-            round(asset_balance, 8), stable_asset_symbol, stable_asset_balance))
+                                      round(asset_balance, 8), stable_asset_symbol, stable_asset_balance))
 
         # check price change
         asset_price = float(req("GET", base_url+"/api/v3/ticker/price",
@@ -191,7 +181,7 @@ while(1):
             print("check_ta:", ta)
             if (value_delta < 0 and ta) or (value_delta < 0 and first_re == 1):
                 order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "BUY",
-                                                            "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
+                                                               "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
                 asset_balance = asset_rebalanced_value/asset_price
                 stable_asset_balance = position_value-asset_rebalanced_value
                 last_re_price = asset_price
@@ -201,7 +191,7 @@ while(1):
                 write_csv()
             elif (value_delta > 0 and ta) or (value_delta > 0 and first_re == 1):
                 order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "SELL",
-                                                            "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
+                                                               "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
                 asset_balance = asset_rebalanced_value/asset_price
                 stable_asset_balance = position_value-asset_rebalanced_value
                 last_re_price = asset_price
