@@ -106,22 +106,22 @@ def check_ta(symbol: str, timeframe: str):
     df = get_candles(symbol, timeframe, 160)
     df = signal(df, 17, 18, 30)
     df.to_csv("check_ta.csv")
-    if int(df.iloc[-1,-1]) == 1:
+    if int(df.iloc[-1,-1]) > 0:
         return True
     return False
 
 
-"""
-symbol = "BTCUSDT"
+
+symbol = "FLUXUSDT"
 timeframe = '4h'
 df = get_candles(symbol, timeframe, 1000)
 # print(df)
 #df = signal_1(df, 14, 10, 15, 50)
-df = signal(df, 17, 18, 30)
+df = signal(df, 14, 14, 30)
 # df.to_csv("t.csv")
 print(df)
 plot(df, symbol, timeframe)
 
 
 # EMA10 & 15 cross + rsi backward check + chg%
-"""
+
