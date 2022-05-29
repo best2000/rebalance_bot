@@ -1,6 +1,9 @@
 FROM python:3.11-rc-alpine
 
-WORKDIR /usr/src/app
+ENV API_KEY=xxx
+ENV SECRET_KEY=xxx
+
+WORKDIR /app
 
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt

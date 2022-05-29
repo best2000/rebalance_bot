@@ -12,13 +12,14 @@ import json
 from tech_ana import check_ta
 from history_log import add_row, write_csv
 from datetime import datetime
+import asyncio
 
 # load config.ini
 config = ConfigParser()
 config.read('config.ini')
 # settings
 testnet = int(config['binance']['testnet'])
-print('testnet:', testnet,"\n")
+print('testnet:', testnet, "\n")
 if testnet == 1:
     base_url = config['binance']['testnet_url']
     api_key = config['binance']['api_key_testnet']
@@ -106,115 +107,149 @@ print('first_re:', first_re)
 print("asset_start_price:", str(asset_start_price))
 
 
-while(1):
-    try:
-        # re config
-        config.read('config.ini')
-        dynamic_asset_ratio_upside = json.loads(
-            config['duo_mode']['dynamic_asset_ratio_upside'])
-        dynamic_asset_ratio_downside = json.loads(
-            config['duo_mode']['dynamic_asset_ratio_downside'])
-        asset_ratio_stable = float(config['duo_mode']['asset_ratio_stable'])
-        rebalance_trig_pct = int(config['duo_mode']['rebalance_trig_pct'])
+async def wait():
+    bar = [
+        " | sleeping   ",
+        " / sleeping.  ",
+        " ─ sleeping.. ",
+        " \ sleeping...",
+    ]
+    i = 0
 
-        # check exhange pair
-        exchange_info = req("GET", base_url+"/api/v3/exchangeInfo",
-                            {"symbol": symbol})['symbols'][0]
-        symbol_status = exchange_info['status']
+    while True:
+        print(bar[i % len(bar)], end="\r")
+        await asyncio.sleep(0.1)
+        i += 1
 
-        if symbol_status != "TRADING":
-            raise Exception("binance suspended trading!")
 
-        # check price change (from start)
-        asset_price = float(req("GET", base_url+"/api/v3/ticker/price",
-                                {"symbol": symbol})['price'])
-        asset_price_pct_change_start = (
-            (asset_price - asset_start_price) / asset_start_price)*100
+async def loop():
+    asyncio.create_task(wait())
+    while(1):
+        global asset_start_price
+        global first_re
+        global last_re_price
+        global asset_start_price
+        global asset_symbol
+        global asset_balance
+        global stable_asset_symbol
+        global stable_asset_balance
+        global symbol
 
-        # check asset ratio change
-        asset_ratio = asset_ratio_stable
-        if int(config['duo_mode']['enable_dynamic_asset_ratio']) == 1:
-            if asset_price_pct_change_start >= 0:
-                for k in dynamic_asset_ratio_upside.keys():
-                    if asset_price_pct_change_start >= float(k):
-                        asset_ratio = dynamic_asset_ratio_upside[k]
-                        break
-                    else:
-                        asset_ratio = asset_ratio_stable
-            elif asset_price_pct_change_start < 0:
-                for k in dynamic_asset_ratio_downside.keys():
-                    if asset_price_pct_change_start <= float(k):
-                        asset_ratio = dynamic_asset_ratio_downside[k]
-                        break
-                    else:
-                        asset_ratio = asset_ratio_stable
+        try:
+            # re config
+            config.read('config.ini')
+            dynamic_asset_ratio_upside = json.loads(
+                config['duo_mode']['dynamic_asset_ratio_upside'])
+            dynamic_asset_ratio_downside = json.loads(
+                config['duo_mode']['dynamic_asset_ratio_downside'])
+            asset_ratio_stable = float(
+                config['duo_mode']['asset_ratio_stable'])
+            rebalance_trig_pct = int(config['duo_mode']['rebalance_trig_pct'])
 
-        # calculate rebalance value
-        asset_current_value = asset_balance*asset_price
-        position_value = asset_current_value+stable_asset_balance
-        asset_rebalanced_value = position_value*asset_ratio
+            # check exhange pair
+            exchange_info = req("GET", base_url+"/api/v3/exchangeInfo",
+                                {"symbol": symbol})['symbols'][0]
+            symbol_status = exchange_info['status']
 
-        # rebalance trade conditions
-        value_delta = asset_current_value-asset_rebalanced_value
-        price_pct_change_last_re = abs(
-            (last_re_price-asset_price/last_re_price)*100)
+            if symbol_status != "TRADING":
+                raise Exception("binance suspended trading!")
 
-        # PRINT---
-        print("-------------------------------------------")
-        print("[CONFIG]")
-        print("dynamic_asset_ratio_upside:", dynamic_asset_ratio_upside)
-        print("dynamic_asset_ratio_downside:",dynamic_asset_ratio_downside)
-        print("asset_ratio_stable:",asset_ratio_stable)
-        print("rebalance_trig_pct:",rebalance_trig_pct)
-        print("-----------------------")
-        print("[REBALANCE]")
-        print(asset_symbol+"_balance: "+str(asset_balance))
-        print(stable_asset_symbol+"_balance: "+str(stable_asset_balance))
-        print()
-        print(asset_symbol+"_price: "+str(asset_price))
-        print(asset_symbol+"_price_pct_change_start: " +
-              str(asset_price_pct_change_start))
-        print("last_re_price:", str(last_re_price))
-        print("price_change_from_last_re_price:",
-              str(last_re_price-asset_price))
-        print()
-        print("rebalance_trig_pct:", str(rebalance_trig_pct))
-        print(asset_symbol+"_ratio(allocation): "+str(asset_ratio))
-        print()
-        print("position_value:", str(position_value))
-        print(asset_symbol+"_current_value(position): "+str(asset_current_value))
-        print(asset_symbol+"_rebalanced_value(position): " +
-              str(asset_rebalanced_value))
-        print("value_delta:", str(value_delta))
-        print()
-        # --------
+            # check price change (from start)
+            asset_price = float(req("GET", base_url+"/api/v3/ticker/price",
+                                    {"symbol": symbol})['price'])
+            asset_price_pct_change_start = (
+                (asset_price - asset_start_price) / asset_start_price)*100
 
-        if (abs(value_delta) > 30 and price_pct_change_last_re > rebalance_trig_pct) or first_re == 1:
-            print('EXCUTE REBALANCE')
-            ta = check_ta(symbol, '4h')
-            print("check_ta:", ta)
-            if (value_delta < 0 and ta) or (value_delta < 0 and first_re == 1):
-                order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "BUY",
-                                                               "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
-                asset_balance = asset_rebalanced_value/asset_price
-                stable_asset_balance = position_value-asset_rebalanced_value
-                last_re_price = asset_price
-                # save history log
-                add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "BUY", asset_price, asset_price_pct_change_start,
-                        value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
-                write_csv()
-            elif (value_delta > 0 and ta) or (value_delta > 0 and first_re == 1):
-                order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "SELL",
-                                                               "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
-                asset_balance = asset_rebalanced_value/asset_price
-                stable_asset_balance = position_value-asset_rebalanced_value
-                last_re_price = asset_price
-                # save history log
-                add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "SELL", asset_price, asset_price_pct_change_start,
-                        value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
-                write_csv()
-            first_re = 0
-    except Exception as err:
-        print(err)
-    print("-------------------------------------------")
-    time.sleep(10)
+            # check asset ratio change
+            asset_ratio = asset_ratio_stable
+            if int(config['duo_mode']['enable_dynamic_asset_ratio']) == 1:
+                if asset_price_pct_change_start >= 0:
+                    for k in dynamic_asset_ratio_upside.keys():
+                        if asset_price_pct_change_start >= float(k):
+                            asset_ratio = dynamic_asset_ratio_upside[k]
+                            break
+                        else:
+                            asset_ratio = asset_ratio_stable
+                elif asset_price_pct_change_start < 0:
+                    for k in dynamic_asset_ratio_downside.keys():
+                        if asset_price_pct_change_start <= float(k):
+                            asset_ratio = dynamic_asset_ratio_downside[k]
+                            break
+                        else:
+                            asset_ratio = asset_ratio_stable
+
+            # calculate rebalance value
+            asset_current_value = asset_balance*asset_price
+            position_value = asset_current_value+stable_asset_balance
+            asset_rebalanced_value = position_value*asset_ratio
+
+            # rebalance trade conditions
+            value_delta = asset_current_value-asset_rebalanced_value
+            price_pct_change_last_re = abs(
+                (last_re_price-asset_price/last_re_price)*100)
+
+            # PRINT---
+            os.system('cls' if os.name == 'nt' else 'clear')
+            print("--------------------")
+            print("\r[CONFIG]")
+            print("symbol:", symbol)
+            print("start_price:", asset_start_price)
+            print("dynamic_asset_ratio_upside:", dynamic_asset_ratio_upside)
+            print("dynamic_asset_ratio_downside:",
+                  dynamic_asset_ratio_downside)
+            print("asset_ratio_stable:", asset_ratio_stable)
+            print("rebalance_trig_pct:", rebalance_trig_pct)
+            print("-------------------")
+            print("[STATUS]")
+            print(asset_symbol+"_balance: "+str(asset_balance))
+            print(stable_asset_symbol+"_balance: "+str(stable_asset_balance))
+            print()
+            print(asset_symbol+"_price: "+str(asset_price))
+            print(asset_symbol+"_price_pct_change_start: " +
+                  str(asset_price_pct_change_start))
+            print("last_re_price:", str(last_re_price))
+            print("price_change_from_last_re_price:",
+                  str(last_re_price-asset_price))
+            print()
+            print("rebalance_trig_pct:", str(rebalance_trig_pct))
+            print(asset_symbol+"_ratio(allocation): "+str(asset_ratio))
+            print()
+            print("position_value:", str(position_value))
+            print(asset_symbol+"_current_value(position): " +
+                  str(asset_current_value))
+            print(asset_symbol+"_rebalanced_value(position): " +
+                  str(asset_rebalanced_value))
+            print("value_delta:", str(value_delta))
+            # --------
+
+            if (abs(value_delta) > 30 and price_pct_change_last_re > rebalance_trig_pct) or first_re == 1:
+                print("--------------------")
+                print('[EXCUTE_REBALANCE]')
+                ta = check_ta(symbol, '4h')
+                print("check_ta:", ta)
+                if (value_delta < 0 and ta) or (value_delta < 0 and first_re == 1):
+                    order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "BUY",
+                                                                   "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
+                    asset_balance = asset_rebalanced_value/asset_price
+                    stable_asset_balance = position_value-asset_rebalanced_value
+                    last_re_price = asset_price
+                    # save history log
+                    add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "BUY", asset_price, asset_price_pct_change_start,
+                            value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
+                    write_csv()
+                elif (value_delta > 0 and ta) or (value_delta > 0 and first_re == 1):
+                    order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "SELL",
+                                                                   "type": "MARKET", "quoteOrderQty": abs(value_delta)}, auth=True)
+                    asset_balance = asset_rebalanced_value/asset_price
+                    stable_asset_balance = position_value-asset_rebalanced_value
+                    last_re_price = asset_price
+                    # save history log
+                    add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "SELL", asset_price, asset_price_pct_change_start,
+                            value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
+                    write_csv()
+                first_re = 0
+        except Exception as err:
+            print(err)
+        print("--------------------")
+        await asyncio.sleep(300)
+asyncio.run(loop())

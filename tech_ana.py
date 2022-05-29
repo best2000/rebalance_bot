@@ -105,6 +105,7 @@ def plot(df: pd.DataFrame, symbol: str, timeframe: str):
 def check_ta(symbol: str, timeframe: str):
     df = get_candles(symbol, timeframe, 160)
     df = signal(df, 17, 18, 30)
+    df.to_csv("check_ta.csv")
     if int(df.iloc[-1,-1]) == 1:
         return True
     return False
