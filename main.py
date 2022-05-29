@@ -1,3 +1,4 @@
+from cgi import test
 import os
 from tkinter.messagebox import NO
 import dotenv
@@ -16,7 +17,9 @@ from datetime import datetime
 config = ConfigParser()
 config.read('config.ini')
 # settings
-if int(config['binance']['testnet']) == 1:
+testnet = int(config['binance']['testnet'])
+print('testnet:', testnet,"\n")
+if testnet == 1:
     base_url = config['binance']['testnet_url']
     api_key = config['binance']['api_key_testnet']
     secret_key = config['binance']['secret_key_testnet']
@@ -94,17 +97,14 @@ if int(config['duo_mode']['auto_asset_start_price']) == 1:
 else:
     asset_start_price = float(config['duo_mode']['asset_start_price'])
 
-rebalance_trig_pct = int(config['duo_mode']['rebalance_trig_pct'])
-rebalance_trig_pct_price_range = round(
-    rebalance_trig_pct/100*asset_start_price, 2)
 
 last_re_price = asset_start_price
 
 first_re = int(config['duo_mode']['first_re'])
 
-print("asset_start_price:", asset_start_price)
-print("rebalance_trig_pct:", rebalance_trig_pct)
-print("rebalance_trig_pct_price_range:", rebalance_trig_pct_price_range)
+print('first_re:', first_re)
+print("asset_start_price:", str(asset_start_price))
+
 
 while(1):
     try:
@@ -115,6 +115,7 @@ while(1):
         dynamic_asset_ratio_downside = json.loads(
             config['duo_mode']['dynamic_asset_ratio_downside'])
         asset_ratio_stable = float(config['duo_mode']['asset_ratio_stable'])
+        rebalance_trig_pct = int(config['duo_mode']['rebalance_trig_pct'])
 
         # check exhange pair
         exchange_info = req("GET", base_url+"/api/v3/exchangeInfo",
@@ -124,60 +125,73 @@ while(1):
         if symbol_status != "TRADING":
             raise Exception("binance suspended trading!")
 
-        print("{}: {}\n{}: {}".format(asset_symbol,
-                                      round(asset_balance, 8), stable_asset_symbol, stable_asset_balance))
-
-        # check price change
+        # check price change (from start)
         asset_price = float(req("GET", base_url+"/api/v3/ticker/price",
                                 {"symbol": symbol})['price'])
-        asset_price_pct_change = round((
-            (asset_price - asset_start_price) / asset_start_price)*100, 2)
-
-        print("{}: {}\nasset_price_pct_change: {}".format(
-            symbol, asset_price, asset_price_pct_change))
+        asset_price_pct_change_start = (
+            (asset_price - asset_start_price) / asset_start_price)*100
 
         # check asset ratio change
-        asset_ratio = None
+        asset_ratio = asset_ratio_stable
         if int(config['duo_mode']['enable_dynamic_asset_ratio']) == 1:
-            if asset_price_pct_change >= 0:
+            if asset_price_pct_change_start >= 0:
                 for k in dynamic_asset_ratio_upside.keys():
-                    if asset_price_pct_change >= float(k):
+                    if asset_price_pct_change_start >= float(k):
                         asset_ratio = dynamic_asset_ratio_upside[k]
                         break
                     else:
                         asset_ratio = asset_ratio_stable
-            elif asset_price_pct_change < 0:
+            elif asset_price_pct_change_start < 0:
                 for k in dynamic_asset_ratio_downside.keys():
-                    if asset_price_pct_change <= float(k):
+                    if asset_price_pct_change_start <= float(k):
                         asset_ratio = dynamic_asset_ratio_downside[k]
                         break
                     else:
                         asset_ratio = asset_ratio_stable
-        else:
-            asset_ratio = asset_ratio_stable
-
-        print("asset_ratio(allocation): {}".format(asset_ratio))
 
         # calculate rebalance value
-        asset_current_value = round(asset_balance*asset_price, 2)
+        asset_current_value = asset_balance*asset_price
         position_value = asset_current_value+stable_asset_balance
-        asset_rebalanced_value = round(position_value*asset_ratio, 2)
-
-        print("position_value: {}\nasset_current_value: {}\nasset_rebalanced_value: {}".format(
-            round(position_value, 2), asset_current_value, asset_rebalanced_value))
+        asset_rebalanced_value = position_value*asset_ratio
 
         # rebalance trade conditions
-        value_delta = round(asset_current_value-asset_rebalanced_value, 2)
+        value_delta = asset_current_value-asset_rebalanced_value
+        price_pct_change_last_re = abs(
+            (last_re_price-asset_price/last_re_price)*100)
 
-        print("value_delta: {}".format(value_delta))
-        print("last_re_price: {}\nprice change from last_re_price: {}".format(
-            last_re_price, round(last_re_price-asset_price), 2))
-        print("rebalance_trig_pct: {}\nrebalance_trig_pct_price_range: {}".format(
-            rebalance_trig_pct, rebalance_trig_pct_price_range))
+        # PRINT---
+        print("-------------------------------------------")
+        print("[CONFIG]")
+        print("dynamic_asset_ratio_upside:", dynamic_asset_ratio_upside)
+        print("dynamic_asset_ratio_downside:",dynamic_asset_ratio_downside)
+        print("asset_ratio_stable:",asset_ratio_stable)
+        print("rebalance_trig_pct:",rebalance_trig_pct)
+        print("-----------------------")
+        print("[REBALANCE]")
+        print(asset_symbol+"_balance: "+str(asset_balance))
+        print(stable_asset_symbol+"_balance: "+str(stable_asset_balance))
+        print()
+        print(asset_symbol+"_price: "+str(asset_price))
+        print(asset_symbol+"_price_pct_change_start: " +
+              str(asset_price_pct_change_start))
+        print("last_re_price:", str(last_re_price))
+        print("price_change_from_last_re_price:",
+              str(last_re_price-asset_price))
+        print()
+        print("rebalance_trig_pct:", str(rebalance_trig_pct))
+        print(asset_symbol+"_ratio(allocation): "+str(asset_ratio))
+        print()
+        print("position_value:", str(position_value))
+        print(asset_symbol+"_current_value(position): "+str(asset_current_value))
+        print(asset_symbol+"_rebalanced_value(position): " +
+              str(asset_rebalanced_value))
+        print("value_delta:", str(value_delta))
+        print()
+        # --------
 
-        if (abs(value_delta) > 30 and abs(last_re_price-asset_price) > rebalance_trig_pct_price_range) or first_re == 1:
+        if (abs(value_delta) > 30 and price_pct_change_last_re > rebalance_trig_pct) or first_re == 1:
             print('EXCUTE REBALANCE')
-            ta = check_ta(symbol, '1h')
+            ta = check_ta(symbol, '4h')
             print("check_ta:", ta)
             if (value_delta < 0 and ta) or (value_delta < 0 and first_re == 1):
                 order = req("POST", base_url+"/api/v3/order", {"symbol": symbol, "side": "BUY",
@@ -186,7 +200,7 @@ while(1):
                 stable_asset_balance = position_value-asset_rebalanced_value
                 last_re_price = asset_price
                 # save history log
-                add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "BUY", asset_price, asset_price_pct_change,
+                add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "BUY", asset_price, asset_price_pct_change_start,
                         value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
                 write_csv()
             elif (value_delta > 0 and ta) or (value_delta > 0 and first_re == 1):
@@ -196,11 +210,11 @@ while(1):
                 stable_asset_balance = position_value-asset_rebalanced_value
                 last_re_price = asset_price
                 # save history log
-                add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "SELL", asset_price, asset_price_pct_change,
+                add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), symbol, "SELL", asset_price, asset_price_pct_change_start,
                         value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
                 write_csv()
             first_re = 0
     except Exception as err:
         print(err)
     print("-------------------------------------------")
-    time.sleep(60)
+    time.sleep(10)
