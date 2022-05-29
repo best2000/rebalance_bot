@@ -222,7 +222,7 @@ async def loop():
             print("value_delta:", str(value_delta))
             # --------
 
-            if (abs(value_delta) > 30 and price_pct_change_last_re > rebalance_trig_pct) or first_re == 1:
+            if (abs(value_delta) > 10 and price_pct_change_last_re > rebalance_trig_pct) or first_re == 1:
                 print("--------------------")
                 print('[EXCUTE_REBALANCE]')
                 ta = check_ta(symbol, '4h')
