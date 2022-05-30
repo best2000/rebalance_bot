@@ -209,7 +209,9 @@ async def loop():
                   str(asset_price_pct_change_start))
             print("last_re_price:", str(last_re_price))
             print("price_change_from_last_re_price:",
-                  str(last_re_price-asset_price))
+                  str(asset_price-last_re_price))
+            print("price_pct_change_last_re:",
+                  str((asset_price-last_re_price)/last_re_price*100))
             print()
             print("rebalance_trig_pct:", str(rebalance_trig_pct))
             print(asset_symbol+"_ratio(allocation): "+str(asset_ratio))
