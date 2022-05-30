@@ -112,15 +112,15 @@ def check_ta(symbol: str, timeframe: str):
 
 
 
-symbol = "FLUXUSDT"
-timeframe = '4h'
-df = get_candles(symbol, timeframe, 1000)
+#symbol = "FLUXUSDT"
+#timeframe = '4h'
+#df = get_candles(symbol, timeframe, 1000)
 # print(df)
 #df = signal_1(df, 14, 10, 15, 50)
-df = signal(df, 14, 14, 30)
+#df = signal(df, 14, 14, 30)
 # df.to_csv("t.csv")
-print(df)
-plot(df, symbol, timeframe)
+#print(df)
+#plot(df, symbol, timeframe)
 
 
 # EMA10 & 15 cross + rsi backward check + chg%

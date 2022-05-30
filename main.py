@@ -1,11 +1,8 @@
-from cgi import test
 import os
-from tkinter.messagebox import NO
 import dotenv
 import requests
 import hashlib
 import hmac
-import time
 from urllib.parse import urlencode
 from configparser import ConfigParser
 import json
