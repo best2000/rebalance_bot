@@ -15,5 +15,5 @@ edit ENV with your `API_KEY` and `SECRET_KEY`
 #build docker image
 docker build -t <name>:<tag> .
 #run container from image, interactive mode, auto delete, mapped host volume to check log data
-docker run -it --rm -v <hostDirectory>:/app/public <imageId>
+docker run -it --rm -v <hostDirectoryName>:/app/public <imageId>
 ```
