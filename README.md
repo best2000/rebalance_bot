@@ -1,7 +1,7 @@
-#Instruction
-##1.Edit config.ini
+# Instructions
+## 1.Edit config.ini
 edit bot parameters in config.ini
-##2.Run docker
+## 2.Run docker
 ```shell
 #build docker image
 docker build -t <name>:<tag>
