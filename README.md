@@ -1,10 +1,19 @@
 # Instructions
-## 1.Edit config.ini
+
+### 1.Edit config.ini
+
 edit bot parameters in config.ini
-## 2.Run docker
+change testnet to 0 if you want real account
+
+### 2.Edit Dockerfile
+
+edit ENV with your `API_KEY` and `SECRET_KEY`
+
+### 3.Run docker
+
 ```shell
 #build docker image
-docker build -t <name>:<tag>
-#run container from image, interactive mode, auto delete 
-docker run --it --rm <imageId>
+docker build -t <name>:<tag> .
+#run container from image, interactive mode, auto delete, mapped host volume to check log data
+docker run --it --rm -v <hostDirectory>:/app/public <imageId>
 ```

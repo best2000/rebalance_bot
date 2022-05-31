@@ -13,7 +13,7 @@ import asyncio
 
 # load config.ini
 config = ConfigParser()
-config.read('config.ini')
+config.read('./public/config.ini')
 # settings
 testnet = int(config['binance']['testnet'])
 print('testnet:', testnet, "\n")
@@ -134,7 +134,7 @@ async def loop():
 
         try:
             # re config
-            config.read('config.ini')
+            config.read('./public/config.ini')
             dynamic_asset_ratio_upside = json.loads(
                 config['duo_mode']['dynamic_asset_ratio_upside'])
             dynamic_asset_ratio_downside = json.loads(

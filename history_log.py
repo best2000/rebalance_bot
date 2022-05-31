@@ -13,7 +13,7 @@ def add_row(time: str, symbol: str, type: str, ass_price: float, asset_price_pct
 
 def write_csv():
     global df
-    df.to_csv("history_log.csv")
+    df.to_csv("./public/history_log.csv")
 
 
 #add_row("tiejhj", "symbol", "BUY", 10.35, 15.2,102.3, 0.5, 102.69, 154.521, 156.7)
