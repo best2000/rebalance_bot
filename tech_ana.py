@@ -96,32 +96,31 @@ def plot(df: pd.DataFrame, symbol: str, timeframe: str):
         base_mpl_style=['dark_background', 'bmh'], marketcolors=mc)
 
     # Plot
-    mpf.plot(df, type='candle', volume=False,
+    mpf.plot(df, type='line', volume=False,
              title="\n"+symbol+" "+timeframe+"\nBottom Signals", style=s, vlines=vl_up)
-    mpf.plot(df, type='candle', volume=False,
+    mpf.plot(df, type='line', volume=False,
              title="\n"+symbol+" "+timeframe+"\nTop Signals", style=s, vlines=vl_down)
 
 
 def check_ta(symbol: str, timeframe: str):
     df = get_candles(symbol, timeframe, 160)
-    df = signal(df, 17, 18, 30)
+    df = signal(df, 14, 14, 30)
     df.to_csv("./public/check_ta.csv")
     if int(df.iloc[-1,-1]) > 0:
         return True
     return False
 
 
-
-#symbol = "FLUXUSDT"
-#timeframe = '4h'
-#df = get_candles(symbol, timeframe, 1000)
-# print(df)
-#df = signal_1(df, 14, 10, 15, 50)
-#df = signal(df, 14, 14, 30)
+"""
+symbol = "FTTUSDT"
+timeframe = '4h'
+df = get_candles(symbol, timeframe, 1000)
+print(df)
+df = signal(df, 14, 14, 30)
 # df.to_csv("t.csv")
-#print(df)
-#plot(df, symbol, timeframe)
-
+print(df)
+plot(df, symbol, timeframe)
+"""
 
 # EMA10 & 15 cross + rsi backward check + chg%
 
