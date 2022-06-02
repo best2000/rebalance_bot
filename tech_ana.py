@@ -106,7 +106,7 @@ def check_ta(symbol: str, timeframe: str):
     df = get_candles(symbol, timeframe, 160)
     df = signal(df, 14, 14, 30)
     df.to_csv("./public/check_ta.csv")
-    if int(df.iloc[-1,-1]) > 0:
+    if int(df.iloc[-1, -1]) > 0 or int(df.iloc[-2, -2]) > 0:
         return True
     return False
 
@@ -123,4 +123,3 @@ plot(df, symbol, timeframe)
 """
 
 # EMA10 & 15 cross + rsi backward check + chg%
-
