@@ -96,7 +96,7 @@ async def loop():
                 raise Exception("FTX suspended trading!")
 
             # check price change (from start)
-            asset_price = market_info['bid']
+            asset_price = market_info['price']
             asset_price_pct_change_start = (
                 (asset_price - asset_start_price) / asset_start_price)*100
 
