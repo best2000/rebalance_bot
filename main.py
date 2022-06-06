@@ -1,4 +1,5 @@
 import os
+import time
 import dotenv
 import requests
 import hashlib
@@ -51,15 +52,15 @@ def get_balance(symbol):
 
 async def wait():
     bar = [
-        " | sleeping   ",
-        " / sleeping.  ",
-        " ─ sleeping.. ",
-        " \ sleeping...",
+        " | ",
+        " / ",
+        " ─ ",
+        " \ ",
     ]
     i = 0
 
     while True:
-        print(bar[i % len(bar)], end="\r")
+        print(bar[i % len(bar)]+str(int(time.time())), end="\r")
         await asyncio.sleep(0.1)
         i += 1
 
@@ -189,5 +190,6 @@ async def loop():
         except Exception as err:
             print(err)
         print("--------------------")
+        print("next_wake:", int(time.time())+300)
         await asyncio.sleep(300)
 asyncio.run(loop())
