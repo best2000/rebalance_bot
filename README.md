@@ -3,7 +3,6 @@
 ### 1. Edit config.ini
 
 - edit bot parameters in `config.ini`
-- change testnet to `0` if you want real account
 
 ### 2. Edit Dockerfile
 
