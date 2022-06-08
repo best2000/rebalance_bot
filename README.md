@@ -15,3 +15,5 @@ docker build -t <name>:<tag> .
 #run container from image, interactive mode, auto delete, mapped host volume to check log data
 docker run -it --rm -v <hostDirectoryName>:/app/public <imageId>
 ```
+- check host mapped volume for linux at /var/lib/docker/volumes/
+ - for windows at \\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes 
