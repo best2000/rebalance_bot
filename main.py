@@ -190,6 +190,5 @@ async def loop():
         except Exception as err:
             print(err)
         print("--------------------")
-        print("next_wake:", int(time.time())+300)
         await asyncio.sleep(300)
 asyncio.run(loop())
