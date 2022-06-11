@@ -38,7 +38,7 @@ while(1):
             (bear_price-bear_start_price) / bear_start_price)*100, 2)
 
         # PRINT---
-        #os.system('cls' if os.name == 'nt' else 'clear')
+        os.system('cls' if os.name == 'nt' else 'clear')
         print("--------------------")
         print("\r[CONFIG]")
         print("sub_account:", sub_account)
