@@ -6,7 +6,6 @@ from requests import Request, Session, Response
 import hmac
 
 
-
 class FtxClient:
     _ENDPOINT = 'https://ftx.com/api/'
 
@@ -34,15 +33,18 @@ class FtxClient:
     def _sign_request(self, request: Request) -> None:
         ts = int(time.time() * 1000)
         prepared = request.prepare()
-        signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode()
+        signature_payload = f'{ts}{prepared.method}{prepared.path_url}'.encode(
+        )
         if prepared.body:
             signature_payload += prepared.body
-        signature = hmac.new(self._api_secret.encode(), signature_payload, 'sha256').hexdigest()
+        signature = hmac.new(self._api_secret.encode(),
+                             signature_payload, 'sha256').hexdigest()
         request.headers['FTX-KEY'] = self._api_key
         request.headers['FTX-SIGN'] = signature
         request.headers['FTX-TS'] = str(ts)
         if self._subaccount_name:
-            request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(self._subaccount_name)
+            request.headers['FTX-SUBACCOUNT'] = urllib.parse.quote(
+                self._subaccount_name)
 
     def _process_response(self, response: Response) -> Any:
         try:
@@ -108,7 +110,8 @@ class FtxClient:
     ) -> dict:
         assert (existing_order_id is None) ^ (existing_client_order_id is None), \
             'Must supply exactly one ID for the order to modify'
-        assert (price is None) or (size is None), 'Must modify price or size of order'
+        assert (price is None) or (
+            size is None), 'Must modify price or size of order'
         path = f'orders/{existing_order_id}/modify' if existing_order_id is not None else \
             f'orders/by_client_id/{existing_client_order_id}/modify'
         return self._post(path, {
@@ -178,8 +181,8 @@ class FtxClient:
         })
 
     def get_fills(self, market: str = None, start_time: float = None,
-        end_time: float = None, min_id: int = None, order_id: int = None
-    ) -> List[dict]:
+                  end_time: float = None, min_id: int = None, order_id: int = None
+                  ) -> List[dict]:
         return self._get('fills', {
             'market': market,
             'start_time': start_time,
@@ -214,27 +217,12 @@ class FtxClient:
 
     def get_position(self, name: str, show_avg_price: bool = False) -> dict:
         return next(filter(lambda x: x['future'] == name, self.get_positions(show_avg_price)), None)
-    """
-    def get_all_trades(self, market: str, start_time: float = None, end_time: float = None) -> List:
-        ids = set()
-        limit = 100
-        results = []
-        while True:
-            response = self._get(f'markets/{market}/trades', {
-                'end_time': end_time,
-                'start_time': start_time,
-            })
-            deduped_trades = [r for r in response if r['id'] not in ids]
-            results.extend(deduped_trades)
-            ids |= {r['id'] for r in deduped_trades}
-            print(f'Adding {len(response)} trades with end time {end_time}')
-            if len(response) == 0:
-                break
-            end_time = min(parse_datetime(t['time']) for t in response).timestamp()
-            if len(response) < limit:
-                break
-        return results
-    """
+
+    def get_balance_specific(self, symbol):
+        for ass in self.get_balances():
+            if ass['coin'] == symbol:
+                return ass
+
     def get_historical_prices(
         self, market: str, resolution: int = 300, start_time: float = None,
         end_time: float = None
@@ -296,7 +284,7 @@ class FtxClient:
     def place_staking_request(self, coin: str = 'SRM', size: float = None) -> dict:
         return self._post('srm_stakes/stakes',)
 
-    def get_funding_rates(self, future: str = None, start_time: float = None, end_time: float = None)-> List[dict]:
+    def get_funding_rates(self, future: str = None, start_time: float = None, end_time: float = None) -> List[dict]:
         return self._get('funding_rates', {
             'future': future,
             'start_time': start_time,
@@ -341,11 +329,44 @@ class FtxClient:
 
     def submit_fiat_withdrawal(self, coin: str, size: int, saved_address_id: int, code: int = None) -> Dict:
         return self._post('wallet/fiat_withdrawals', {
-        'coin': coin,
-        'size': size,
-        'savedAddressId': saved_address_id,
-        'code': code
-    })
+            'coin': coin,
+            'size': size,
+            'savedAddressId': saved_address_id,
+            'code': code
+        })
 
     def get_latency_stats(self, days: int = 1, subaccount_nickname: str = None) -> Dict:
         return self._get('stats/latency_stats', {'days': days, 'subaccount_nickname': subaccount_nickname})
+
+
+def instant_limit_order(client: FtxClient, market_symbol: str, type: str, size: float):
+    ob = client.get_orderbook(market_symbol, 5)
+    if type == "sell":
+        for o in ob['bids']:
+            bid = o[0]
+            amount = o[1]
+            if size < amount:
+                res = client.place_order(
+                    market_symbol, "sell", bid, size, "limit")
+                if 'id' in res:
+                    time.sleep(0.5)
+                    ord = client.get_order_status(res['id'])
+                    if ord['status'] == 'closed':
+                        break
+                    else:
+                        client.cancel_order(res['id'])
+
+    elif type == "buy":
+        for o in ob['asks']:
+            ask = o[0]
+            amount = o[1]
+            if size < amount:
+                res = client.place_order(
+                    market_symbol, "buy", ask, size, "limit")
+                if 'id' in res:
+                    time.sleep(0.5)
+                    ord = client.get_order_status(res['id'])
+                    if ord['status'] == 'closed':
+                        break
+                    else:
+                        client.cancel_order(res['id'])

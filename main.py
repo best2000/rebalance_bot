@@ -1,194 +1,172 @@
+from modules.ftx_client import FtxClient, instant_limit_order
+from modules.trade_log import add_row
+from modules.tech import check_ta
+from configparser import ConfigParser
+import pandas as pd
+import dotenv
 import os
 import time
-import dotenv
-import requests
-import hashlib
-import hmac
-from urllib.parse import urlencode
-from configparser import ConfigParser
-import json
-from tech_ana import check_ta
-from history_log import add_row, write_csv
-from datetime import datetime
-import asyncio
-from ftx_client import FtxClient
+import math
+import datetime
+import sys
+import logging
+from logging.handlers import TimedRotatingFileHandler
+from logging import Formatter
 
 
-# load config.ini
-config = ConfigParser()
-config.read('./public/config.ini')
-# load .env
-dotenv.load_dotenv('.env')
-api_key = os.environ.get("API_KEY")
-secret_key = os.environ.get("SECRET_KEY")
+# logger setup
+logger = logging.getLogger("main")
 
-client = FtxClient(api_key,
-                   secret_key, config["config"]['sub_account'])
+# create handler
+handler = TimedRotatingFileHandler(
+    filename='./logs/main.log', when='D', interval=1, backupCount=7, encoding='utf-8', delay=False)
 
-market_symbol = config["config"]["market_symbol"]
-asset_symbol = market_symbol.split("/")[0]
-stable_asset_symbol = market_symbol.split("/")[1]
-
-# auto_asset_start_price setup
-asset_start_price = None
-if int(config["config"]['auto_asset_start_price']) == 1:
-    asset_start_price = client.get_single_market(market_symbol)['bid']
-else:
-    asset_start_price = float(config["config"]['asset_start_price'])
-
-last_re_price = asset_start_price
-
-first_re = int(config["config"]['first_re'])
-
-print('first_re:', first_re)
-print("asset_start_price:", str(asset_start_price))
+formatter = Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+logger.setLevel(logging.DEBUG)
 
 
-def get_balance(symbol):
-    for a in client.get_balances():
-        if a['coin'] == symbol:
-            return a
+class Bot:
+    def __init__(self, conf_path: str = "./config.ini", env_path: str = "./.env"):
+        # config
+        self.conf_path = conf_path
+        self.env_path = env_path
+        self.read_config()
+        # ftx client setup
+        dotenv.load_dotenv(self.env_path)
+        api_key = os.environ.get("API_FTX")
+        secret_key = os.environ.get("SECRET_FTX")
+        self.ftx_client = FtxClient(api_key,
+                                    secret_key, self.sub_account)
 
+        # symbol variables
+        self.base_symbol = self.market_symbol.split('/')[0]
+        self.quote_symbol = self.market_symbol.split('/')[1]
 
-async def wait():
-    bar = [
-        " | ",
-        " / ",
-        " ─ ",
-        " \ ",
-    ]
-    i = 0
+        # init price
+        # check exhange pair and price
+        self.market_info = self.ftx_client.get_single_market(
+            self.market_symbol)
+        if self.market_info['enabled'] == False:
+            raise Exception("FTX suspended trading!")
+        self.init_price = self.market_info['price']
 
-    while True:
-        print(bar[i % len(bar)]+str(int(time.time())), end="\r")
-        await asyncio.sleep(0.1)
-        i += 1
+        # calculate init nav
+        self.base_symbol_balance = self.ftx_client.get_balance_specific(
+            self.base_symbol)
+        self.quote_symbol_balance = self.ftx_client.get_balance_specific(
+            self.quote_symbol)
+        self.init_nav = float(0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue']) + float(
+            0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
+        
+        # first update stats
+        self.update_stats()
 
+    def read_config(self):
+        config = ConfigParser()
+        config.read(self.conf_path)
+        # main
+        self.market_symbol = config['main']['market_symbol']
+        self.sub_account = config["main"]['sub_account']
+        # technical analysis
+        #self.timeframe_buy = config["ta"]['timeframe_buy']
 
-async def loop():
-    asyncio.create_task(wait())
-    while(1):
-        global asset_start_price
-        global first_re
-        global last_re_price
-        global asset_start_price
-        global market_symbol
-        global asset_symbol
-        global stable_asset_symbol
+    def update_stats(self):
+        # check exhange pair and price
+        self.market_info = self.ftx_client.get_single_market(
+            self.market_symbol)
+        if self.market_info['enabled'] == False:
+            raise Exception("FTX suspended trading!")
+        # check price
+        self.price = self.market_info['price']
+        self.price_chg_pct = round(
+            ((self.price-self.init_price)/self.init_price)*100, 2)
+        # calculate nav
+        self.base_symbol_balance = self.ftx_client.get_balance_specific(
+            self.base_symbol)
+        self.quote_symbol_balance = self.ftx_client.get_balance_specific(
+            self.quote_symbol)
+        self.nav = float(0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue']) + float(
+            0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
+        self.nav_pct = self.nav/self.init_nav*100
 
-        try:
-            # re config
-            config.read('./public/config.ini')
-            dynamic_asset_ratio_upside = json.loads(
-                config["config"]['dynamic_asset_ratio_upside'])
-            dynamic_asset_ratio_downside = json.loads(
-                config["config"]['dynamic_asset_ratio_downside'])
-            asset_ratio_stable = float(
-                config["config"]['asset_ratio_stable'])
-            rebalance_trig_pct = int(config["config"]['rebalance_trig_pct'])
-
-            # check balance
-            asset_balance = get_balance(asset_symbol)['free']
-            stable_asset_balance = get_balance(stable_asset_symbol)['free']
-
-            market_info = client.get_single_market(market_symbol)
-            # check exhange pair
-            if market_info['enabled'] == False:
-                raise Exception("FTX suspended trading!")
-
-            # check price change (from start)
-            asset_price = market_info['price']
-            asset_price_pct_change_start = (
-                (asset_price - asset_start_price) / asset_start_price)*100
-
-            # check asset ratio change
-            asset_ratio = asset_ratio_stable
-            if int(config["config"]['enable_dynamic_asset_ratio']) == 1:
-                if asset_price_pct_change_start >= 0:
-                    for k in dynamic_asset_ratio_upside.keys():
-                        if asset_price_pct_change_start >= float(k):
-                            asset_ratio = dynamic_asset_ratio_upside[k]
-                            break
-                        else:
-                            asset_ratio = asset_ratio_stable
-                elif asset_price_pct_change_start < 0:
-                    for k in dynamic_asset_ratio_downside.keys():
-                        if asset_price_pct_change_start <= float(k):
-                            asset_ratio = dynamic_asset_ratio_downside[k]
-                            break
-                        else:
-                            asset_ratio = asset_ratio_stable
-
-            # calculate rebalance value
-            asset_current_value = asset_balance*asset_price
-            position_value = asset_current_value+stable_asset_balance
-            asset_rebalanced_value = position_value*asset_ratio
-
-            # rebalance trade conditions
-            value_delta = asset_current_value-asset_rebalanced_value
-            price_pct_change_last_re = abs(
-                (last_re_price-asset_price/last_re_price)*100)
-
-            # PRINT---
-            os.system('cls' if os.name == 'nt' else 'clear')
-            print("--------------------")
-            print("\r[CONFIG]")
-            print("symbol:", market_symbol)
-            print("start_price:", asset_start_price)
-            print("dynamic_asset_ratio_upside:", dynamic_asset_ratio_upside)
-            print("dynamic_asset_ratio_downside:",
-                  dynamic_asset_ratio_downside)
-            print("asset_ratio_stable:", asset_ratio_stable)
-            print("rebalance_trig_pct:", rebalance_trig_pct)
-            print("-------------------")
-            print("[STATUS]")
-            print(asset_symbol+"_balance: "+str(asset_balance))
-            print(stable_asset_symbol+"_balance: "+str(stable_asset_balance))
-            print()
-            print(asset_symbol+"_price: "+str(asset_price))
-            print(asset_symbol+"_price_pct_change_start: " +
-                  str(asset_price_pct_change_start))
-            print("last_re_price:", str(last_re_price))
-            print("price_change_from_last_re_price:",
-                  str(asset_price-last_re_price))
-            print("price_pct_change_last_re:",
-                  str((asset_price-last_re_price)/last_re_price*100))
-            print()
-            print("rebalance_trig_pct:", str(rebalance_trig_pct))
-            print(asset_symbol+"_ratio(allocation): "+str(asset_ratio))
-            print()
-            print("position_value:", str(position_value))
-            print(asset_symbol+"_current_value(position): " +
-                  str(asset_current_value))
-            print(asset_symbol+"_rebalanced_value(position): " +
-                  str(asset_rebalanced_value))
-            print("value_delta:", str(value_delta))
-            # --------
-
-            if (abs(value_delta) > 10 and price_pct_change_last_re > rebalance_trig_pct) or first_re == 1:
-                print("--------------------")
-                print('[EXCUTE_REBALANCE]')
-                ta = check_ta(market_symbol.replace('/', ''), '4h')
-                print("check_ta:", ta)
-                if (value_delta < 0 and ta) or (value_delta < 0 and first_re == 1):
-                    client.place_order(market_symbol, 'buy', None, abs(
-                        value_delta)/asset_price, "market")
-                    last_re_price = asset_price
-                    # save history log
-                    add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), market_symbol, "buy", asset_price, asset_price_pct_change_start,
-                            value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
-                    write_csv()
-                elif (value_delta > 0 and ta) or (value_delta > 0 and first_re == 1):
-                    client.place_order(market_symbol, 'sell', None, abs(
-                        value_delta)/asset_price, "market")
-                    last_re_price = asset_price
-                    # save history log
-                    add_row(datetime.now().strftime("%d/%m/%Y %H:%M:%S"), market_symbol, "sell", asset_price, asset_price_pct_change_start,
-                            value_delta, asset_ratio, asset_balance, stable_asset_balance, position_value)
-                    write_csv()
-                first_re = 0
-        except Exception as err:
-            print(err)
+    def display_stats(self):
+        # os.system('cls' if os.name == 'nt' else 'clear')
         print("--------------------")
-        await asyncio.sleep(300)
-asyncio.run(loop())
+        print("[CONFIG]")
+        print("market_symbol:", self.market_symbol)
+        print("sub_account:", self.sub_account)
+        print("-------------------")
+        print("[STATUS]")
+        print("{}: {}".format(self.market_symbol, self.price))
+        print(self.base_symbol+" balance: " +
+              str(round(float(0 if not self.base_symbol_balance else self.base_symbol_balance['free']), 4)))
+        print(self.quote_symbol+" balance: " +
+              str(round(float(0 if not self.quote_symbol_balance else self.quote_symbol_balance['free']), 2)))
+        print("price_chg: "+str(self.price_chg_pct)+"%")
+        print("NAV: "+str(round(self.nav, 2))+"/" +
+              str(round(self.init_nav, 2))+" ["+str(int(self.nav_pct))+"%]")
+        print("--------------------")
+        print("timestamp:", datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        print("--------------------")
+
+    def run(self):
+        while True:
+            try:
+                # price tick
+                self.update_stats()
+                # update config
+                self.read_config()
+
+                traded = 0
+                """
+                # check ta signal
+                ta_buy_df = check_ta(self.market_symbol, self.timeframe_buy,
+                                     self.ema1_len_buy, self.ema2_len_buy, 100, name="buy")
+                buy_sig = ta_buy_df.iloc[-2, -1]
+
+                logger.debug(
+                    "buy_sig={} | sell_sig={}".format(buy_sig, sell_sig))
+                
+                    # buy
+                    if pos_val > 0:
+                        pos_unit = pos_val/self.market_info['ask']
+                        instant_limit_order(
+                            self.ftx_client, self.market_symbol, "buy", pos_unit)
+                        traded = 1
+
+                        logger.debug("brought!")
+
+                    # sell
+                    if pos_hold > 0:
+                        instant_limit_order(
+                            self.ftx_client, self.market_symbol, "sell", pos_hold)
+                        traded = 1
+
+                        logger.debug("sold!")
+                """
+
+                # LOG
+                if traded:
+                    #logger.info("traded")
+                    # re tick
+                    self.update_stats()
+                    # update log
+                    add_row(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                            self.price, self.price_chg_pct, self.nav, self.nav_pct)
+
+                # print stats
+                self.display_stats()
+            except Exception as err:
+                print(err)
+                logger.error(err)
+            time.sleep(62)
+
+
+bot = Bot()
+# print(bot.grid)
+# print(bot.grid_trading)
+for k in bot.__dict__:
+    print(k, ':', bot.__dict__[k])
+bot.run()
