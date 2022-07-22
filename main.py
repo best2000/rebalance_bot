@@ -59,7 +59,7 @@ class Bot:
             self.quote_symbol)
         self.init_nav = float(0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue']) + float(
             0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
-        
+
         # first update stats
         self.update_stats()
 
@@ -82,13 +82,18 @@ class Bot:
         self.price = self.market_info['price']
         self.price_chg_pct = round(
             ((self.price-self.init_price)/self.init_price)*100, 2)
-        # calculate nav
+        # calculate stats
         self.base_symbol_balance = self.ftx_client.get_balance_specific(
             self.base_symbol)
         self.quote_symbol_balance = self.ftx_client.get_balance_specific(
             self.quote_symbol)
-        self.nav = float(0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue']) + float(
+        self.base_symbol_balance_value = float(
+            0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue'])
+        self.quote_symbol_balance_value = float(
             0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
+        self.nav = self.base_symbol_balance_value + self.quote_symbol_balance_value
+        self.base_symbol_balance_value_ratio_pct = round((
+            self.base_symbol_balance_value/self.nav)*100,2)
         self.nav_pct = self.nav/self.init_nav*100
 
     def display_stats(self):
@@ -100,10 +105,12 @@ class Bot:
         print("-------------------")
         print("[STATUS]")
         print("{}: {}".format(self.market_symbol, self.price))
-        print(self.base_symbol+" balance: " +
+        print(self.base_symbol+"_balance: " +
               str(round(float(0 if not self.base_symbol_balance else self.base_symbol_balance['free']), 4)))
-        print(self.quote_symbol+" balance: " +
+        print(self.quote_symbol+"_balance: " +
               str(round(float(0 if not self.quote_symbol_balance else self.quote_symbol_balance['free']), 2)))
+        print("{}_balance_val: {}%".format(self.base_symbol,
+              self.base_symbol_balance_value_ratio_pct))
         print("price_chg: "+str(self.price_chg_pct)+"%")
         print("NAV: "+str(round(self.nav, 2))+"/" +
               str(round(self.init_nav, 2))+" ["+str(int(self.nav_pct))+"%]")
@@ -149,7 +156,7 @@ class Bot:
 
                 # LOG
                 if traded:
-                    #logger.info("traded")
+                    # logger.info("traded")
                     # re tick
                     self.update_stats()
                     # update log
