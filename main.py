@@ -6,12 +6,12 @@ import pandas as pd
 import dotenv
 import os
 import time
-import math
 import datetime
-import sys
 import logging
 from logging.handlers import TimedRotatingFileHandler
 from logging import Formatter
+import json
+import pickle
 
 
 # logger setup
@@ -93,7 +93,7 @@ class Bot:
             0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
         self.nav = self.base_symbol_balance_value + self.quote_symbol_balance_value
         self.base_symbol_balance_value_ratio_pct = round((
-            self.base_symbol_balance_value/self.nav)*100,2)
+            self.base_symbol_balance_value/self.nav)*100, 2)
         self.nav_pct = self.nav/self.init_nav*100
 
     def display_stats(self):
@@ -109,7 +109,7 @@ class Bot:
               str(round(float(0 if not self.base_symbol_balance else self.base_symbol_balance['free']), 4)))
         print(self.quote_symbol+"_balance: " +
               str(round(float(0 if not self.quote_symbol_balance else self.quote_symbol_balance['free']), 2)))
-        print("{}_balance_val: {}%".format(self.base_symbol,
+        print("{}_ratio: {}%".format(self.base_symbol,
               self.base_symbol_balance_value_ratio_pct))
         print("price_chg: "+str(self.price_chg_pct)+"%")
         print("NAV: "+str(round(self.nav, 2))+"/" +
@@ -118,16 +118,27 @@ class Bot:
         print("timestamp:", datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         print("--------------------")
 
+    def save_instance(self):
+        # json
+        instance = dict(self.__dict__)  # make copy of dict
+        instance['ftx_client'] = str(instance['ftx_client'])
+        with open("./logs/instance.json", "w") as file_json:
+            json.dump(instance, file_json, indent=4)
+        # pickle
+        with open('./instance.pkl', 'wb') as file_pkl:
+            pickle.dump(self, file_pkl, pickle.HIGHEST_PROTOCOL)
+
     def run(self):
         while True:
             try:
                 # price tick
                 self.update_stats()
+                self.save_instance()
                 # update config
                 self.read_config()
 
-                traded = 0
                 """
+                traded = 0
                 # check ta signal
                 ta_buy_df = check_ta(self.market_symbol, self.timeframe_buy,
                                      self.ema1_len_buy, self.ema2_len_buy, 100, name="buy")
@@ -152,28 +163,35 @@ class Bot:
                         traded = 1
 
                         logger.debug("sold!")
-                """
+                
 
                 # LOG
                 if traded:
                     # logger.info("traded")
                     # re tick
                     self.update_stats()
+                    self.save_instance_to_json()
                     # update log
                     add_row(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                            self.price, self.price_chg_pct, self.nav, self.nav_pct)
+                            self.price, self.price_chg_pct, self.nav, self.nav_pct, self.base_symbol_balance_value_ratio_pct)
+                """
 
                 # print stats
                 self.display_stats()
             except Exception as err:
                 print(err)
                 logger.error(err)
-            time.sleep(62)
+            time.sleep(65)
 
 
-bot = Bot()
-# print(bot.grid)
-# print(bot.grid_trading)
-for k in bot.__dict__:
-    print(k, ':', bot.__dict__[k])
-bot.run()
+try:
+    with open('instance.pkl', 'rb') as file_pkl:
+        read_instance = input("use exist instance [y/n]?: ")
+        if read_instance == "y":
+            bot = pickle.load(file_pkl)
+        elif read_instance == "n":
+            raise Exception()
+except Exception as err:
+    bot = Bot()
+finally:
+    bot.run()
