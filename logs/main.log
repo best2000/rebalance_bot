@@ -10,3 +10,4 @@
 2022-07-23 19:04:53,586 - ERROR - vars() argument must have __dict__ attribute
 2022-07-23 19:08:47,756 - ERROR - dumps() takes 1 positional argument but 2 positional arguments (and 1 keyword-only argument) were given
 2022-07-23 19:09:29,174 - ERROR - 'Bot' object has no attribute 'ftx_client'
+2022-07-24 00:58:08,425 - ERROR - 'timeframe'

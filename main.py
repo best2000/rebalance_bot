@@ -1,3 +1,4 @@
+from numpy import dstack
 from modules.ftx_client import FtxClient, instant_limit_order
 from modules.trade_log import add_row
 from modules.tech import check_ta
@@ -60,6 +61,9 @@ class Bot:
         self.init_nav = float(0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue']) + float(
             0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
 
+        # last rb vars
+        self.last_rb_price = -1
+
         # first update stats
         self.update_stats()
 
@@ -69,8 +73,15 @@ class Bot:
         # main
         self.market_symbol = config['main']['market_symbol']
         self.sub_account = config["main"]['sub_account']
+        # rb conditions
+        self.trig_price_chg_thresh = float(config["rb"]['trig_price_chg_thresh'])
+        self.base_ratio = float(config["rb"]['base_ratio'])
         # technical analysis
-        #self.timeframe_buy = config["ta"]['timeframe_buy']
+        self.timeframe = config["ta"]['timeframe']
+        self.ema1_len = int(config["ta"]['ema1_len'])
+        self.ema2_len = int(config["ta"]['ema2_len'])
+        #self.ema3_len = int(config["ta"]['ema3_len'])
+        self.rsi_len = int(config["ta"]['rsi_len'])
 
     def update_stats(self):
         # check exhange pair and price
@@ -96,6 +107,10 @@ class Bot:
             self.base_symbol_balance_value/self.nav)*100, 2)
         self.nav_pct = self.nav/self.init_nav*100
 
+        # last rb stats
+        self.last_rb_price_chg_pct = round(((
+            self.price - self.last_rb_price)/self.last_rb_price)*100, 2)
+
     def display_stats(self):
         # os.system('cls' if os.name == 'nt' else 'clear')
         print("--------------------")
@@ -112,8 +127,10 @@ class Bot:
         print("{}_ratio: {}%".format(self.base_symbol,
               self.base_symbol_balance_value_ratio_pct))
         print("price_chg: "+str(self.price_chg_pct)+"%")
-        print("NAV: "+str(round(self.nav, 2))+"/" +
-              str(round(self.init_nav, 2))+" ["+str(int(self.nav_pct))+"%]")
+        print("last_rb_price: {}".format(self.last_rb_price))
+        print("last_rb_price_chg: {}%".format(self.last_rb_price_chg_pct))
+        print("NAV: {}/{} [{}%]".format(round(self.nav, 2),
+              round(self.init_nav, 2), round(self.nav_pct, 2)))
         print("--------------------")
         print("timestamp:", datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
         print("--------------------")
@@ -146,7 +163,7 @@ class Bot:
 
                 logger.debug(
                     "buy_sig={} | sell_sig={}".format(buy_sig, sell_sig))
-                
+
                     # buy
                     if pos_val > 0:
                         pos_unit = pos_val/self.market_info['ask']
@@ -163,7 +180,7 @@ class Bot:
                         traded = 1
 
                         logger.debug("sold!")
-                
+
 
                 # LOG
                 if traded:
@@ -186,7 +203,7 @@ class Bot:
 
 try:
     with open('./instance.pkl', 'rb') as file_pkl:
-        read_instance = input("use exist instance [y/n]?: ")
+        read_instance = input("Use exist instance [y/n]?: ")
         if read_instance == "y":
             bot = pickle.load(file_pkl)
         elif read_instance == "n":
