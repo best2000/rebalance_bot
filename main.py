@@ -185,7 +185,7 @@ class Bot:
 
 
 try:
-    with open('instance.pkl', 'rb') as file_pkl:
+    with open('./instance.pkl', 'rb') as file_pkl:
         read_instance = input("use exist instance [y/n]?: ")
         if read_instance == "y":
             bot = pickle.load(file_pkl)
