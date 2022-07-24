@@ -18,7 +18,7 @@ logger = logging.getLogger("main")
 
 # create handler
 handler = TimedRotatingFileHandler(
-    filename='./logs/main.log', when='D', interval=1, backupCount=7, encoding='utf-8', delay=False)
+    filename='./public/logs/main.log', when='D', interval=1, backupCount=7, encoding='utf-8', delay=False)
 
 formatter = Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
@@ -27,7 +27,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class Bot:
-    def __init__(self, conf_path: str = "./config.ini", env_path: str = "./.env"):
+    def __init__(self, conf_path: str = "./public/config.ini", env_path: str = "./.env"):
         # config
         self.conf_path = conf_path
         self.env_path = env_path
@@ -141,7 +141,7 @@ class Bot:
         # json
         instance = dict(self.__dict__)  # make copy of dict
         instance['ftx_client'] = str(instance['ftx_client'])
-        with open("./logs/instance.json", "w") as file_json:
+        with open("./public/logs/instance.json", "w") as file_json:
             json.dump(instance, file_json, indent=4)
         # pickle
         with open('./instance.pkl', 'wb') as file_pkl:

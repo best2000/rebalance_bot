@@ -64,7 +64,7 @@ def check_ta_ema(symbol: str, timeframe: str,  ema1_len: int = 5, ema2_len: int 
     df = get_candles(symbol, timeframe, limit)
     df = signal_ema(df, ema1_len, ema2_len)
     if 'name' in kwargs:
-        df.to_csv("./logs/ta_"+str(kwargs['name'])+".csv")
+        df.to_csv("./public/logs/ta_"+str(kwargs['name'])+".csv")
     return df
 
 
@@ -72,7 +72,7 @@ def check_ta_rsi(symbol: str, timeframe: str,  rsi_len: int = 14, limit: int = 1
     df = get_candles(symbol, timeframe, limit)
     df = signal_rsi(df, rsi_len)
     if 'name' in kwargs:
-        df.to_csv("./logs/ta_"+str(kwargs['name'])+".csv")
+        df.to_csv("./public/logs/ta_"+str(kwargs['name'])+".csv")
     return df
 
 

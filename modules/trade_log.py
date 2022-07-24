@@ -1,7 +1,7 @@
 import csv
 
 col = ["datetime", "price", "price_chg%", "NAV", "NAV%", "base_ratio%"]
-with open('./logs/trade_log.csv', 'w', encoding='UTF8') as f:
+with open('./public/logs/trade_log.csv', 'w', encoding='UTF8') as f:
     writer = csv.writer(f)
     writer.writerow(col)
 
