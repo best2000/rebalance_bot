@@ -1,9 +1,7 @@
-from numpy import dstack
 from modules.ftx_client import FtxClient, instant_limit_order
 from modules.trade_log import add_row
-from modules.tech import check_ta, check_ta_ema, check_ta_rsi
+from modules.tech import check_ta_ema, check_ta_rsi
 from configparser import ConfigParser
-import pandas as pd
 import dotenv
 import os
 import time
@@ -152,11 +150,12 @@ class Bot:
     def run(self):
         while True:
             try:
+                # update config
+                self.read_config()
+                
                 # price tick
                 self.update_stats()
                 self.save_instance()
-                # update config
-                self.read_config()
 
                 # check ta signal
                 ta_rb_df = check_ta_ema(self.market_symbol, self.timeframe_rb,
@@ -177,7 +176,7 @@ class Bot:
                 if (rb_sig == 1 or rb_sig == 2) and rsi_base_ratio != self.base_balance_value_ratio and self.last_rb_price_chg_pct > self.trig_price_chg_thresh:
                     logger.info("execute rebalance")
 
-                    # cal RB
+                    # calculate
                     if rsi_base_ratio > self.base_ratio_max:
                         rsi_base_ratio = self.base_ratio_max
                     elif rsi_base_ratio < self.base_ratio_min:
@@ -193,26 +192,41 @@ class Bot:
                     logger.info(
                         "trade_val={} | trade_unit={}".format(trade_val, trade_unit))
 
+                    #check rb buy/sell
+                    traded = False
                     if self.base_balance_value_ratio > rsi_base_ratio:
                         # sell
                         instant_limit_order(
                             self.ftx_client, self.market_symbol, "sell", trade_unit)
+                        traded = True
+                        
                         logger.info("sold {} {}".format(
                             trade_unit, self.base_symbol))
                     elif self.base_balance_value_ratio < rsi_base_ratio:
                         # buy
                         instant_limit_order(
                             self.ftx_client, self.market_symbol, "buy", trade_unit)
+                        traded = True
+                        
                         logger.info("brought {} {}".format(
                             trade_unit, self.base_symbol))
-
-                    # re tick
-                    self.update_stats()
-                    self.save_instance()
-                    # update log
-                    add_row(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                            self.price, self.price_chg_pct, self.nav, self.nav_pct, self.base_balance_value_ratio_pct)
-
+                    
+                    #check traded
+                    if traded:
+                        logger.info("traded")
+                        
+                        #update last_rb_price
+                        self.last_rb_price = self.price
+                        # re tick
+                        self.update_stats()
+                        self.save_instance()
+                        # update log
+                        add_row(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                                self.price, self.price_chg_pct, self.nav, self.nav_pct, self.base_balance_value_ratio_pct)
+                        
+                #print stats
+                self.display_stats()
+                
             except Exception as err:
                 print(err)
                 logger.error(err)
