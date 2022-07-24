@@ -1,7 +1,7 @@
 from numpy import dstack
 from modules.ftx_client import FtxClient, instant_limit_order
 from modules.trade_log import add_row
-from modules.tech import check_ta
+from modules.tech import check_ta, check_ta_ema, check_ta_rsi
 from configparser import ConfigParser
 import pandas as pd
 import dotenv
@@ -54,12 +54,12 @@ class Bot:
         self.init_price = self.market_info['price']
 
         # calculate init nav
-        self.base_symbol_balance = self.ftx_client.get_balance_specific(
+        self.base_balance = self.ftx_client.get_balance_specific(
             self.base_symbol)
-        self.quote_symbol_balance = self.ftx_client.get_balance_specific(
+        self.quote_balance = self.ftx_client.get_balance_specific(
             self.quote_symbol)
-        self.init_nav = float(0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue']) + float(
-            0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
+        self.init_nav = float(0 if not self.base_balance else self.base_balance['usdValue']) + float(
+            0 if not self.quote_balance else self.quote_balance['usdValue'])
 
         # last rb vars
         self.last_rb_price = -1
@@ -74,13 +74,16 @@ class Bot:
         self.market_symbol = config['main']['market_symbol']
         self.sub_account = config["main"]['sub_account']
         # rb conditions
-        self.trig_price_chg_thresh = float(config["rb"]['trig_price_chg_thresh'])
-        self.base_ratio = float(config["rb"]['base_ratio'])
+        self.trig_price_chg_thresh = float(
+            config["rb"]['trig_price_chg_thresh'])
+        #self.base_ratio = float(config["rb"]['base_ratio'])
+        self.base_ratio_min = float(config["rb"]['base_ratio_min'])
+        self.base_ratio_max = float(config["rb"]['base_ratio_max'])
         # technical analysis
-        self.timeframe = config["ta"]['timeframe']
+        self.timeframe_rb = config["ta"]['timeframe_rb']
         self.ema1_len = int(config["ta"]['ema1_len'])
         self.ema2_len = int(config["ta"]['ema2_len'])
-        #self.ema3_len = int(config["ta"]['ema3_len'])
+        self.timeframe_ratio = config["ta"]['timeframe_ratio']
         self.rsi_len = int(config["ta"]['rsi_len'])
 
     def update_stats(self):
@@ -94,17 +97,18 @@ class Bot:
         self.price_chg_pct = round(
             ((self.price-self.init_price)/self.init_price)*100, 2)
         # calculate stats
-        self.base_symbol_balance = self.ftx_client.get_balance_specific(
+        self.base_balance = self.ftx_client.get_balance_specific(
             self.base_symbol)
-        self.quote_symbol_balance = self.ftx_client.get_balance_specific(
+        self.quote_balance = self.ftx_client.get_balance_specific(
             self.quote_symbol)
-        self.base_symbol_balance_value = float(
-            0 if not self.base_symbol_balance else self.base_symbol_balance['usdValue'])
-        self.quote_symbol_balance_value = float(
-            0 if not self.quote_symbol_balance else self.quote_symbol_balance['usdValue'])
-        self.nav = self.base_symbol_balance_value + self.quote_symbol_balance_value
-        self.base_symbol_balance_value_ratio_pct = round((
-            self.base_symbol_balance_value/self.nav)*100, 2)
+        self.base_balance_value = float(
+            0 if not self.base_balance else self.base_balance['usdValue'])
+        self.quote_balance_value = float(
+            0 if not self.quote_balance else self.quote_balance['usdValue'])
+        self.nav = self.base_balance_value + self.quote_balance_value
+        self.base_balance_value_ratio = self.base_balance_value/self.nav
+        self.base_balance_value_ratio_pct = round(
+            self.base_balance_value_ratio*100, 2)
         self.nav_pct = self.nav/self.init_nav*100
 
         # last rb stats
@@ -121,11 +125,11 @@ class Bot:
         print("[STATUS]")
         print("{}: {}".format(self.market_symbol, self.price))
         print(self.base_symbol+"_balance: " +
-              str(round(float(0 if not self.base_symbol_balance else self.base_symbol_balance['free']), 4)))
+              str(round(float(0 if not self.base_balance else self.base_balance['free']), 4)))
         print(self.quote_symbol+"_balance: " +
-              str(round(float(0 if not self.quote_symbol_balance else self.quote_symbol_balance['free']), 2)))
+              str(round(float(0 if not self.quote_balance else self.quote_balance['free']), 2)))
         print("{}_ratio: {}%".format(self.base_symbol,
-              self.base_symbol_balance_value_ratio_pct))
+              self.base_balance_value_ratio_pct))
         print("price_chg: "+str(self.price_chg_pct)+"%")
         print("last_rb_price: {}".format(self.last_rb_price))
         print("last_rb_price_chg: {}%".format(self.last_rb_price_chg_pct))
@@ -154,51 +158,64 @@ class Bot:
                 # update config
                 self.read_config()
 
-                """
-                traded = 0
                 # check ta signal
-                ta_buy_df = check_ta(self.market_symbol, self.timeframe_buy,
-                                     self.ema1_len_buy, self.ema2_len_buy, 100, name="buy")
-                buy_sig = ta_buy_df.iloc[-2, -1]
+                ta_rb_df = check_ta_ema(self.market_symbol, self.timeframe_rb,
+                                        self.ema1_len, self.ema2_len, 100, name="rb")
+                rb_sig = ta_rb_df.iloc[-2, -1]
+                ta_ratio_df = check_ta_rsi(self.market_symbol, self.timeframe_ratio,
+                                           self.rsi_len, 100, name="ratio")
+                rsi_quote_ratio_pct = ta_ratio_df.iloc[-2, -1]
+                rsi_base_ratio_pct = 100 - rsi_quote_ratio_pct
+                rsi_base_ratio = rsi_base_ratio_pct/100
 
-                logger.debug(
-                    "buy_sig={} | sell_sig={}".format(buy_sig, sell_sig))
+                logger.info(
+                    "rb_sig={} | rsi_quote_ratio_pct={} | rsi_base_ratio_pct={}".format(rb_sig, rsi_quote_ratio_pct, rsi_base_ratio_pct))
+                logger.info(
+                    "rsi_base_ratio={} | base_balance_value_ratio={} | last_rb_price_chg_pct={} | trig_price_chg_thresh={}".format(rsi_base_ratio, self.base_balance_value_ratio, self.last_rb_price_chg_pct, self.trig_price_chg_thresh))
 
-                    # buy
-                    if pos_val > 0:
-                        pos_unit = pos_val/self.market_info['ask']
+                # check rb
+                if (rb_sig == 1 or rb_sig == 2) and rsi_base_ratio != self.base_balance_value_ratio and self.last_rb_price_chg_pct > self.trig_price_chg_thresh:
+                    logger.info("execute rebalance")
+
+                    # cal RB
+                    if rsi_base_ratio > self.base_ratio_max:
+                        rsi_base_ratio = self.base_ratio_max
+                    elif rsi_base_ratio < self.base_ratio_min:
+                        rsi_base_ratio = self.base_ratio_min
+                    logger.info(
+                        "rsi_base_ratio_filter={} | base_ratio_max={} | base_ratio_min={}".format(rsi_base_ratio, self.base_ratio_max, self.base_ratio_min))
+
+                    trade_val = abs((self.nav*rsi_base_ratio) -
+                                    (self.nav*self.base_balance_value_ratio))
+                    trade_unit = trade_val/self.price
+                    logger.info(
+                        "trade_val={} | trade_unit={}".format(trade_val, trade_unit))
+
+                    if self.base_balance_value_ratio > rsi_base_ratio:
+                        # sell
                         instant_limit_order(
-                            self.ftx_client, self.market_symbol, "buy", pos_unit)
-                        traded = 1
-
-                        logger.debug("brought!")
-
-                    # sell
-                    if pos_hold > 0:
+                            self.ftx_client, self.market_symbol, "sell", trade_unit)
+                        logger.info("sold {} {}".format(
+                            trade_unit, self.base_symbol))
+                    elif self.base_balance_value_ratio < rsi_base_ratio:
+                        # buy
                         instant_limit_order(
-                            self.ftx_client, self.market_symbol, "sell", pos_hold)
-                        traded = 1
+                            self.ftx_client, self.market_symbol, "buy", trade_unit)
+                        logger.info("brought {} {}".format(
+                            trade_unit, self.base_symbol))
 
-                        logger.debug("sold!")
-
-
-                # LOG
-                if traded:
-                    # logger.info("traded")
                     # re tick
                     self.update_stats()
-                    self.save_instance_to_json()
+                    self.save_instance()
                     # update log
                     add_row(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                            self.price, self.price_chg_pct, self.nav, self.nav_pct, self.base_symbol_balance_value_ratio_pct)
-                """
+                            self.price, self.price_chg_pct, self.nav, self.nav_pct, self.base_balance_value_ratio_pct)
 
-                # print stats
-                self.display_stats()
             except Exception as err:
                 print(err)
                 logger.error(err)
-            time.sleep(65)
+            finally:
+                time.sleep(65)
 
 
 try:
