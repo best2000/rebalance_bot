@@ -1,0 +1,48 @@
+2022-07-24 17:29:42,548 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:29:42,548 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08611893925597741 | last_rb_price_chg_pct=-3018.3 | trig_price_chg_thresh=10.0
+2022-07-24 17:35:33,270 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:35:33,270 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08608118165501703 | last_rb_price_chg_pct=-3011.7 | trig_price_chg_thresh=10.0
+2022-07-24 17:36:39,122 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:36:39,122 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08574392187777045 | last_rb_price_chg_pct=-3004.1 | trig_price_chg_thresh=10.0
+2022-07-24 17:37:44,913 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:37:44,913 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08562514719860757 | last_rb_price_chg_pct=-3000.0 | trig_price_chg_thresh=10.0
+2022-07-24 17:38:50,740 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:38:50,741 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08571153184375833 | last_rb_price_chg_pct=-3003.8 | trig_price_chg_thresh=10.0
+2022-07-24 17:39:56,620 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:39:56,620 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08563864587542475 | last_rb_price_chg_pct=-3000.7 | trig_price_chg_thresh=10.0
+2022-07-24 17:41:02,465 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:41:02,465 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.0856629424893641 | last_rb_price_chg_pct=-3001.4 | trig_price_chg_thresh=10.0
+2022-07-24 17:42:08,273 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:42:08,273 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08569263659738009 | last_rb_price_chg_pct=-3002.5 | trig_price_chg_thresh=10.0
+2022-07-24 17:49:02,334 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:49:02,334 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08553064530003283 | last_rb_price_chg_pct=-2996.5 | trig_price_chg_thresh=10.0
+2022-07-24 17:50:08,139 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:50:08,139 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08556574828540264 | last_rb_price_chg_pct=-2997.8 | trig_price_chg_thresh=10.0
+2022-07-24 17:54:26,537 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:54:26,538 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08555494765386562 | last_rb_price_chg_pct=-2997.3 | trig_price_chg_thresh=10.0
+2022-07-24 17:55:32,350 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:55:32,350 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08564944452992238 | last_rb_price_chg_pct=-3000.7 | trig_price_chg_thresh=10.0
+2022-07-24 17:56:38,750 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:56:38,750 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08563864587542475 | last_rb_price_chg_pct=-3000.5 | trig_price_chg_thresh=10.0
+2022-07-24 17:57:44,526 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 17:57:44,526 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08560084857593686 | last_rb_price_chg_pct=-2999.1 | trig_price_chg_thresh=10.0
+2022-07-24 18:18:04,396 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:18:04,396 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08654484456622415 | last_rb_price_chg_pct=-3034.1 | trig_price_chg_thresh=10.0
+2022-07-24 18:18:09,980 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:18:09,981 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08654484456622415 | last_rb_price_chg_pct=-3034.3 | trig_price_chg_thresh=10.0
+2022-07-24 18:19:15,878 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:19:15,878 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08685189687235645 | last_rb_price_chg_pct=-3047.3 | trig_price_chg_thresh=10.0
+2022-07-24 18:20:21,792 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:20:21,792 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08689766768828575 | last_rb_price_chg_pct=-3046.9 | trig_price_chg_thresh=10.0
+2022-07-24 18:21:27,700 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:21:27,700 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.0868545894003154 | last_rb_price_chg_pct=-3046.2 | trig_price_chg_thresh=10.0
+2022-07-24 18:22:33,806 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:22:33,806 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08699457897697506 | last_rb_price_chg_pct=-3049.2 | trig_price_chg_thresh=10.0
+2022-07-24 18:23:39,716 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:23:39,716 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08674687589527375 | last_rb_price_chg_pct=-3041.6 | trig_price_chg_thresh=10.0
+2022-07-24 18:24:45,511 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:24:45,511 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08665799312165462 | last_rb_price_chg_pct=-3037.5 | trig_price_chg_thresh=10.0
+2022-07-24 18:25:29,740 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:25:29,741 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08674418273206186 | last_rb_price_chg_pct=-3041.4 | trig_price_chg_thresh=10.0
+2022-07-24 18:26:35,711 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-24 18:26:35,711 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08674148955296575 | last_rb_price_chg_pct=-3041.4 | trig_price_chg_thresh=10.0
