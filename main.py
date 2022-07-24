@@ -182,12 +182,14 @@ class Bot:
                         rsi_base_ratio = self.base_ratio_max
                     elif rsi_base_ratio < self.base_ratio_min:
                         rsi_base_ratio = self.base_ratio_min
+                        
                     logger.info(
                         "rsi_base_ratio_filter={} | base_ratio_max={} | base_ratio_min={}".format(rsi_base_ratio, self.base_ratio_max, self.base_ratio_min))
 
                     trade_val = abs((self.nav*rsi_base_ratio) -
                                     (self.nav*self.base_balance_value_ratio))
                     trade_unit = trade_val/self.price
+                    
                     logger.info(
                         "trade_val={} | trade_unit={}".format(trade_val, trade_unit))
 
