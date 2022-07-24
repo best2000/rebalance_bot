@@ -1,5 +1,5 @@
 from modules.ftx_client import FtxClient, instant_limit_order
-from modules.trade_log import add_row
+from modules.db import insert_trade_log, truncate_table
 from modules.tech import check_ta_ema, check_ta_rsi
 from configparser import ConfigParser
 import dotenv
@@ -62,6 +62,9 @@ class Bot:
         # last rb vars
         self.last_rb_price = -1
 
+        #clear table
+        truncate_table("trade_logs")
+        
         # first update stats
         self.update_stats()
 
@@ -85,6 +88,8 @@ class Bot:
         self.rsi_len = int(config["ta"]['rsi_len'])
 
     def update_stats(self):
+        #datetime
+        self.datetime = datetime.datetime.now()
         # check exhange pair and price
         self.market_info = self.ftx_client.get_single_market(
             self.market_symbol)
@@ -134,13 +139,14 @@ class Bot:
         print("NAV: {}/{} [{}%]".format(round(self.nav, 2),
               round(self.init_nav, 2), round(self.nav_pct, 2)))
         print("--------------------")
-        print("timestamp:", datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"))
+        print("timestamp:", self.datetime.strftime("%d/%m/%Y %H:%M:%S"))
         print("--------------------")
 
     def save_instance(self):
         # json
         instance = dict(self.__dict__)  # make copy of dict
         instance['ftx_client'] = str(instance['ftx_client'])
+        instance['datetime'] = self.datetime.strftime("%d/%m/%Y %H:%M:%S")
         with open("./public/logs/instance.json", "w") as file_json:
             json.dump(instance, file_json, indent=4)
         # pickle
@@ -221,9 +227,9 @@ class Bot:
                         self.update_stats()
                         self.save_instance()
                         # update log
-                        add_row(datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
-                                self.price, self.price_chg_pct, self.nav, self.nav_pct, self.base_balance_value_ratio_pct)
-                        
+                        insert_trade_log(int(self.datetime.timestamp()), self.price, self.price_chg_pct,
+                                self.nav, self.nav_pct, self.base_balance_value_ratio_pct)
+                    
                 #print stats
                 self.display_stats()
                 

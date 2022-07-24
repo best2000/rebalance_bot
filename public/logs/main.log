@@ -46,3 +46,6 @@
 2022-07-24 18:25:29,741 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08674418273206186 | last_rb_price_chg_pct=-3041.4 | trig_price_chg_thresh=10.0
 2022-07-24 18:26:35,711 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
 2022-07-24 18:26:35,711 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08674148955296575 | last_rb_price_chg_pct=-3041.4 | trig_price_chg_thresh=10.0
+2022-07-25 00:09:35,232 - ERROR - Object of type datetime is not JSON serializable
+2022-07-25 00:10:48,423 - INFO - rb_sig=0 | rsi_quote_ratio_pct=55.76054430712725 | rsi_base_ratio_pct=44.23945569287275
+2022-07-25 00:10:48,423 - INFO - rsi_base_ratio=0.44239455692872753 | base_balance_value_ratio=0.08613512012992686 | last_rb_price_chg_pct=-3019.1 | trig_price_chg_thresh=10.0
