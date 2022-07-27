@@ -1,4 +1,4 @@
-import sqlite3
+from csv import reader
 from modules.ftx_client import FtxClient, instant_limit_order
 from modules.csv import add_row
 from modules.tech import check_ta_ema, check_ta_rsi
@@ -154,15 +154,13 @@ class Bot:
             pickle.dump(self, file_pkl, pickle.HIGHEST_PROTOCOL)
     
     def plot(self):
-        # get data from db
-        conn = sqlite3.connect("./public/log.db")
-        c = conn.cursor()
-        c.execute(
-            "SELECT * FROM trade_logs ORDER BY datetime DESC")
-        data = c.fetchall()
-        data.reverse()  # old...new
-        conn.commit()
-        conn.close()
+        # get data from CSV
+        with open('./public/trade_log.csv', 'r') as read_obj:
+            # pass the file object to reader() to get the reader object
+            csv_reader = reader(read_obj)
+            # Pass reader object to list() to get a list of lists
+            data = list(csv_reader)
+            del data[0]
         # plot
         time = [i[0] for i in data]
         #price = [i[1] for i in data]
