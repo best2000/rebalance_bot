@@ -1,3 +1,4 @@
+import sqlite3
 from modules.ftx_client import FtxClient, instant_limit_order
 from modules.db import insert_trade_log, truncate_table
 from modules.tech import check_ta_ema, check_ta_rsi
@@ -11,6 +12,7 @@ from logging.handlers import TimedRotatingFileHandler
 from logging import Formatter
 import json
 import pickle
+import matplotlib.pyplot as plt
 
 
 # logger setup
@@ -18,7 +20,7 @@ logger = logging.getLogger("main")
 
 # create handler
 handler = TimedRotatingFileHandler(
-    filename='./public/logs/main.log', when='D', interval=1, backupCount=7, encoding='utf-8', delay=False)
+    filename='./public/main.log', when='D', interval=1, backupCount=7, encoding='utf-8', delay=False)
 
 formatter = Formatter(fmt='%(asctime)s - %(levelname)s - %(message)s')
 handler.setFormatter(formatter)
@@ -148,11 +150,38 @@ class Bot:
         instance = dict(self.__dict__)  # make copy of dict
         instance['ftx_client'] = str(instance['ftx_client'])
         instance['datetime'] = self.datetime.strftime("%d/%m/%Y %H:%M:%S")
-        with open("./public/logs/instance.json", "w") as file_json:
+        with open("./public/instance.json", "w") as file_json:
             json.dump(instance, file_json, indent=4)
         # pickle
         with open('./instance.pkl', 'wb') as file_pkl:
             pickle.dump(self, file_pkl, pickle.HIGHEST_PROTOCOL)
+    
+    def plot(self):
+        # get data from db
+        conn = sqlite3.connect("./public/log.db")
+        c = conn.cursor()
+        c.execute(
+            "SELECT * FROM trade_logs ORDER BY datetime DESC")
+        data = c.fetchall()
+        data.reverse()  # old...new
+        conn.commit()
+        conn.close()
+        # plot
+        time = [i[0] for i in data]
+        #price = [i[1] for i in data]
+        price_chg_pct = [i[2] for i in data]
+        #nav = [i[3] for i in data]
+        nav_chg_pct = [i[4] for i in data]
+        base_ratio = [i[5] for i in data]
+        fig, (ax1, ax2) = plt.subplots(2, sharex=True)
+        ax1.plot(time, price_chg_pct, color="r", marker=".", label="price%")
+        ax1.plot(time, nav_chg_pct, color="g", marker=".", label='nav%')
+        #ax1.set_ylim(0, 500)
+        ax1.legend()
+        ax2.plot(time, base_ratio, marker=".", label='asset ratio%')
+        ax2.set_ylim(0, 100)
+        ax2.legend()
+        fig.savefig("./public/trade_logs.svg")
 
     def run(self):
         while True:
@@ -230,6 +259,8 @@ class Bot:
                         # update log
                         insert_trade_log(int(self.datetime.timestamp()), self.price, self.price_chg_pct,
                                          self.nav, (self.nav_pct-100), self.base_balance_value_ratio_pct)
+                        #plot
+                        self.plot()
                     
                 #print stats
                 self.display_stats()
