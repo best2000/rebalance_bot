@@ -138,6 +138,7 @@ class Bot:
         print("last_rb_price_chg: {}%".format(self.last_rb_price_chg_pct))
         print("NAV: {}/{} [{}%]".format(round(self.nav, 2),
               round(self.init_nav, 2), round(self.nav_pct, 2)))
+        print("NAV_chg: {}%".format(self.nav_pct-100))
         print("--------------------")
         print("timestamp:", self.datetime.strftime("%d/%m/%Y %H:%M:%S"))
         print("--------------------")
@@ -228,7 +229,7 @@ class Bot:
                         self.save_instance()
                         # update log
                         insert_trade_log(int(self.datetime.timestamp()), self.price, self.price_chg_pct,
-                                self.nav, self.nav_pct, self.base_balance_value_ratio_pct)
+                                         self.nav, (self.nav_pct-100), self.base_balance_value_ratio_pct)
                     
                 #print stats
                 self.display_stats()
