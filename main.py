@@ -1,6 +1,6 @@
 import sqlite3
 from modules.ftx_client import FtxClient, instant_limit_order
-from modules.db import insert_trade_log, truncate_table
+from modules.csv import add_row
 from modules.tech import check_ta_ema, check_ta_rsi
 from configparser import ConfigParser
 import dotenv
@@ -63,9 +63,6 @@ class Bot:
 
         # last rb vars
         self.last_rb_price = -1
-
-        #clear table
-        truncate_table("trade_logs")
         
         # first update stats
         self.update_stats()
@@ -257,8 +254,8 @@ class Bot:
                         self.update_stats()
                         self.save_instance()
                         # update log
-                        insert_trade_log(int(self.datetime.timestamp()), self.price, self.price_chg_pct,
-                                         self.nav, (self.nav_pct-100), self.base_balance_value_ratio_pct)
+                        add_row(self.datetime.strftime("%d/%m/%Y %H:%M:%S"),
+                                self.price, self.price_chg_pct, self.nav, (self.nav_pct-100), self.base_balance_value_ratio_pct)
                         #plot
                         self.plot()
                     
