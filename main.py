@@ -29,7 +29,7 @@ logger.setLevel(logging.DEBUG)
 
 
 class Bot:
-    def __init__(self, conf_path: str = "./public/config.ini", env_path: str = "./.env"):
+    def __init__(self, conf_path: str = "./config.ini", env_path: str = "./.env"):
         # config
         self.conf_path = conf_path
         self.env_path = env_path
