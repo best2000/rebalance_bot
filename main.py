@@ -177,6 +177,7 @@ class Bot:
         ax2.set_ylim(0, 100)
         ax2.legend()
         fig.savefig("./public/trade_logs.svg")
+        logger.info("saved plot => ./public/trade_logs.svg")
 
     def run(self):
         while True:
