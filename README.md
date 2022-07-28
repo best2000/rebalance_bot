@@ -13,10 +13,10 @@
 #build docker image
 docker build -t <name>:<tag> .
 #run container from image, interactive mode, auto delete, mapped host volume to check log data
-docker run -it -v <hostDirectoryName>:/app/public <imageId> bash
+docker run -it -v <hostPath>:/app/public <imageId> bash
 ```
-- check host mapped volume for linux at /var/lib/docker/volumes/
-- for windows at \\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes 
+- check host mapped volume for linux(default) at /var/lib/docker/volumes/
+- for windows(default) at \\wsl$\docker-desktop-data\version-pack-data\community\docker\volumes 
 - To get back in the container shell run this command
 ```shell
 docker exec -it <container_id> bash
