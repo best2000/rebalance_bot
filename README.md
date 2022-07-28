@@ -13,7 +13,7 @@
 #build docker image
 docker build -t <name>:<tag> .
 #run container from image, interactive mode, auto delete, mapped host volume to check log data
-docker run -it -v <hostPath>:/app/public <imageId> bash
+docker run --name <container_name> -it -v <hostPath>:/app/public <imageId> bash
 ```
 ```shell
 #inside container shell
