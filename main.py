@@ -63,7 +63,7 @@ class Bot:
 
         # last rb vars
         self.last_rb_price = -1
-        
+
         # first update stats
         self.update_stats()
 
@@ -87,7 +87,7 @@ class Bot:
         self.rsi_len = int(config["ta"]['rsi_len'])
 
     def update_stats(self):
-        #datetime
+        # datetime
         self.datetime = datetime.datetime.now()
         # check exhange pair and price
         self.market_info = self.ftx_client.get_single_market(
@@ -152,7 +152,7 @@ class Bot:
         # pickle
         with open('./instance.pkl', 'wb') as file_pkl:
             pickle.dump(self, file_pkl, pickle.HIGHEST_PROTOCOL)
-    
+
     def plot(self):
         # get data from CSV
         with open('./public/trade_log.csv', 'r') as read_obj:
@@ -183,7 +183,7 @@ class Bot:
             try:
                 # update config
                 self.read_config()
-                
+
                 # price tick
                 self.update_stats()
                 self.save_instance()
@@ -204,7 +204,7 @@ class Bot:
                     "rsi_base_ratio={} | base_balance_value_ratio={} | last_rb_price_chg_pct={} | trig_price_chg_thresh={}".format(rsi_base_ratio, self.base_balance_value_ratio, self.last_rb_price_chg_pct, self.trig_price_chg_thresh))
 
                 # check rb
-                if (rb_sig == 1 or rb_sig == 2) and rsi_base_ratio != self.base_balance_value_ratio and self.last_rb_price_chg_pct > self.trig_price_chg_thresh:
+                if (rb_sig == 1 or rb_sig == 2) and rsi_base_ratio != self.base_balance_value_ratio and abs(self.last_rb_price_chg_pct) > self.trig_price_chg_thresh:
                     logger.info("execute rebalance")
 
                     # calculate
@@ -212,25 +212,25 @@ class Bot:
                         rsi_base_ratio = self.base_ratio_max
                     elif rsi_base_ratio < self.base_ratio_min:
                         rsi_base_ratio = self.base_ratio_min
-                        
+
                     logger.info(
                         "rsi_base_ratio_filter={} | base_ratio_max={} | base_ratio_min={}".format(rsi_base_ratio, self.base_ratio_max, self.base_ratio_min))
 
                     trade_val = abs((self.nav*rsi_base_ratio) -
                                     (self.nav*self.base_balance_value_ratio))
                     trade_unit = trade_val/self.price
-                    
+
                     logger.info(
                         "trade_val={} | trade_unit={}".format(trade_val, trade_unit))
 
-                    #check rb buy/sell
+                    # check rb buy/sell
                     traded = False
                     if self.base_balance_value_ratio > rsi_base_ratio:
                         # sell
                         instant_limit_order(
                             self.ftx_client, self.market_symbol, "sell", trade_unit)
                         traded = True
-                        
+
                         logger.info("sold {} {}".format(
                             trade_unit, self.base_symbol))
                     elif self.base_balance_value_ratio < rsi_base_ratio:
@@ -238,15 +238,15 @@ class Bot:
                         instant_limit_order(
                             self.ftx_client, self.market_symbol, "buy", trade_unit)
                         traded = True
-                        
+
                         logger.info("brought {} {}".format(
                             trade_unit, self.base_symbol))
-                    
-                    #check traded
+
+                    # check traded
                     if traded:
                         logger.info("traded")
-                        
-                        #update last_rb_price
+
+                        # update last_rb_price
                         self.last_rb_price = self.price
                         # re tick
                         self.update_stats()
@@ -254,12 +254,12 @@ class Bot:
                         # update log
                         add_row(self.datetime.strftime("%d/%m/%Y %H:%M:%S"),
                                 self.price, self.price_chg_pct, self.nav, (self.nav_pct-100), self.base_balance_value_ratio_pct)
-                        #plot
+                        # plot
                         self.plot()
-                    
-                #print stats
+
+                # print stats
                 self.display_stats()
-                
+
             except Exception as err:
                 print(err)
                 logger.error(err)
