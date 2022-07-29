@@ -3,10 +3,12 @@
 ### 1. Edit config.ini
 
 - edit parameters in `/public/config.ini`
+- or edit it later, inside container
 
 ### 2. Edit `Dockerfile`
 
 - edit ENV with your `API_KEY` and `SECRET_KEY`
+- or add ENV later, inside container
 
 ### 3. Start running bot
 ```shell
