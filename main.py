@@ -228,17 +228,15 @@ class Bot:
                     traded = False
                     if self.base_balance_value_ratio > rsi_base_ratio:
                         # sell
-                        instant_limit_order(
+                        traded = instant_limit_order(
                             self.ftx_client, self.market_symbol, "sell", trade_unit)
-                        traded = True
 
                         logger.info("sold {} {}".format(
                             trade_unit, self.base_symbol))
                     elif self.base_balance_value_ratio < rsi_base_ratio:
                         # buy
-                        instant_limit_order(
+                        traded = instant_limit_order(
                             self.ftx_client, self.market_symbol, "buy", trade_unit)
-                        traded = True
 
                         logger.info("brought {} {}".format(
                             trade_unit, self.base_symbol))
