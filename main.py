@@ -54,12 +54,13 @@ class Bot:
         self.init_price = self.market_info['price']
 
         # calculate init nav
-        self.base_balance = self.ftx_client.get_balance_specific(
-            self.base_symbol)
-        self.quote_balance = self.ftx_client.get_balance_specific(
-            self.quote_symbol)
-        self.init_nav = float(0 if not self.base_balance else self.base_balance['usdValue']) + float(
-            0 if not self.quote_balance else self.quote_balance['usdValue'])
+        if self.init_nav <= 0:
+            self.base_balance = self.ftx_client.get_balance_specific(
+                self.base_symbol)
+            self.quote_balance = self.ftx_client.get_balance_specific(
+                self.quote_symbol)
+            self.init_nav = float(0 if not self.base_balance else self.base_balance['usdValue']) + float(
+                0 if not self.quote_balance else self.quote_balance['usdValue'])
 
         # last rb vars
         self.last_rb_price = -1
@@ -73,6 +74,7 @@ class Bot:
         # main
         self.market_symbol = config['main']['market_symbol']
         self.sub_account = config["main"]['sub_account']
+        self.init_nav = float(config['main']['init_nav'])
         # rb conditions
         self.trig_price_chg_thresh = float(
             config["rb"]['trig_price_chg_thresh'])
