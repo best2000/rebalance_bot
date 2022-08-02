@@ -33,6 +33,7 @@ class Bot:
         # config
         self.conf_path = conf_path
         self.env_path = env_path
+        self.config = ConfigParser()
         self.read_config()
         # ftx client setup
         dotenv.load_dotenv(self.env_path)
@@ -61,6 +62,9 @@ class Bot:
                 self.quote_symbol)
             self.init_nav = float(0 if not self.base_balance else self.base_balance['usdValue']) + float(
                 0 if not self.quote_balance else self.quote_balance['usdValue'])
+            self.config['main']['init_nav'] = str(self.init_nav)
+            with open(self.conf_path, 'w') as configfile:    # save
+                self.config.write(configfile)
 
         # last rb vars
         self.last_rb_price = -1
@@ -69,24 +73,23 @@ class Bot:
         self.update_stats()
 
     def read_config(self):
-        config = ConfigParser()
-        config.read(self.conf_path)
+        self.config.read(self.conf_path)
         # main
-        self.market_symbol = config['main']['market_symbol']
-        self.sub_account = config["main"]['sub_account']
-        self.init_nav = float(config['main']['init_nav'])
+        self.market_symbol = self.config['main']['market_symbol']
+        self.sub_account = self.config["main"]['sub_account']
+        self.init_nav = float(self.config['main']['init_nav'])
         # rb conditions
         self.trig_price_chg_thresh = float(
-            config["rb"]['trig_price_chg_thresh'])
+            self.config["rb"]['trig_price_chg_thresh'])
         #self.base_ratio = float(config["rb"]['base_ratio'])
-        self.base_ratio_min = float(config["rb"]['base_ratio_min'])
-        self.base_ratio_max = float(config["rb"]['base_ratio_max'])
+        self.base_ratio_min = float(self.config["rb"]['base_ratio_min'])
+        self.base_ratio_max = float(self.config["rb"]['base_ratio_max'])
         # technical analysis
-        self.timeframe_rb = config["ta"]['timeframe_rb']
-        self.ema1_len = int(config["ta"]['ema1_len'])
-        self.ema2_len = int(config["ta"]['ema2_len'])
-        self.timeframe_ratio = config["ta"]['timeframe_ratio']
-        self.rsi_len = int(config["ta"]['rsi_len'])
+        self.timeframe_rb = self.config["ta"]['timeframe_rb']
+        self.ema1_len = int(self.config["ta"]['ema1_len'])
+        self.ema2_len = int(self.config["ta"]['ema2_len'])
+        self.timeframe_ratio = self.config["ta"]['timeframe_ratio']
+        self.rsi_len = int(self.config["ta"]['rsi_len'])
 
     def update_stats(self):
         # datetime
@@ -149,6 +152,7 @@ class Bot:
         instance = dict(self.__dict__)  # make copy of dict
         instance['ftx_client'] = str(instance['ftx_client'])
         instance['datetime'] = self.datetime.strftime("%d/%m/%Y %H:%M:%S")
+        instance['config'] = self.config._sections
         with open("./public/instance.json", "w") as file_json:
             json.dump(instance, file_json, indent=4)
         # pickle

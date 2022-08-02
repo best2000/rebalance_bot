@@ -1,2 +1,6 @@
-2022-07-28 13:47:46,390 - INFO - rb_sig=0 | rsi_quote_ratio_pct=57.81515216073278 | rsi_base_ratio_pct=42.18484783926722
-2022-07-28 13:47:46,390 - INFO - rsi_base_ratio=0.4218484783926722 | base_balance_value_ratio=0.04717178585236731 | last_rb_price_chg_pct=-3053.6 | trig_price_chg_thresh=10.0
+2022-08-02 18:23:08,491 - ERROR - float division by zero
+2022-08-02 18:33:04,494 - INFO - rb_sig=0 | rsi_quote_ratio_pct=60.494540101272236 | rsi_base_ratio_pct=39.505459898727764
+2022-08-02 18:33:04,494 - INFO - rsi_base_ratio=0.3950545989872776 | base_balance_value_ratio=0.31972023240903485 | last_rb_price_chg_pct=-3016.1 | trig_price_chg_thresh=10.0
+2022-08-02 18:41:07,632 - ERROR - Object of type ConfigParser is not JSON serializable
+2022-08-02 18:42:09,418 - INFO - rb_sig=0 | rsi_quote_ratio_pct=60.494540101272236 | rsi_base_ratio_pct=39.505459898727764
+2022-08-02 18:42:09,418 - INFO - rsi_base_ratio=0.3950545989872776 | base_balance_value_ratio=0.3205622091857272 | last_rb_price_chg_pct=-3026.7 | trig_price_chg_thresh=10.0
