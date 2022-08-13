@@ -8,3 +8,4 @@ matplotlib==3.5.2
 mplfinance==0.12.9b0
 ccxt==1.84.78
 typer==0.4.1
+python-binance==1.0.16

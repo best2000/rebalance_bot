@@ -1,6 +1,9 @@
-2022-08-02 18:23:08,491 - ERROR - float division by zero
-2022-08-02 18:33:04,494 - INFO - rb_sig=0 | rsi_quote_ratio_pct=60.494540101272236 | rsi_base_ratio_pct=39.505459898727764
-2022-08-02 18:33:04,494 - INFO - rsi_base_ratio=0.3950545989872776 | base_balance_value_ratio=0.31972023240903485 | last_rb_price_chg_pct=-3016.1 | trig_price_chg_thresh=10.0
-2022-08-02 18:41:07,632 - ERROR - Object of type ConfigParser is not JSON serializable
-2022-08-02 18:42:09,418 - INFO - rb_sig=0 | rsi_quote_ratio_pct=60.494540101272236 | rsi_base_ratio_pct=39.505459898727764
-2022-08-02 18:42:09,418 - INFO - rsi_base_ratio=0.3950545989872776 | base_balance_value_ratio=0.3205622091857272 | last_rb_price_chg_pct=-3026.7 | trig_price_chg_thresh=10.0
+2022-08-13 14:05:55,009 - ERROR - ftx {"success":false,"error":"No such market: BUSD/USDT "}
+2022-08-13 14:06:46,733 - INFO - rb_sig=0 | rsi_quote_ratio_pct=34.466583731057824 | rsi_base_ratio_pct=65.53341626894218
+2022-08-13 14:06:46,733 - INFO - rsi_base_ratio=0.6553341626894218 | base_balance_value_ratio=1.0 | last_rb_price_chg_pct=-199.94 | trig_price_chg_thresh=10.0
+2022-08-13 14:06:46,734 - ERROR - 'Bot' object has no attribute 'sub_account'
+2022-08-13 14:07:17,176 - INFO - rb_sig=0 | rsi_quote_ratio_pct=34.466583731057824 | rsi_base_ratio_pct=65.53341626894218
+2022-08-13 14:07:17,176 - INFO - rsi_base_ratio=0.6553341626894218 | base_balance_value_ratio=1.0 | last_rb_price_chg_pct=-199.94 | trig_price_chg_thresh=10.0
+2022-08-13 14:07:17,179 - ERROR - 'float' object is not subscriptable
+2022-08-13 14:08:52,099 - INFO - rb_sig=0 | rsi_quote_ratio_pct=34.466583731057824 | rsi_base_ratio_pct=65.53341626894218
+2022-08-13 14:08:52,099 - INFO - rsi_base_ratio=0.6553341626894218 | base_balance_value_ratio=1.0 | last_rb_price_chg_pct=-199.94 | trig_price_chg_thresh=10.0

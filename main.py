@@ -1,5 +1,4 @@
 from csv import reader
-from modules.ftx_client import FtxClient, instant_limit_order
 from modules.csv import add_row
 from modules.tech import check_ta_ema, check_ta_rsi
 from configparser import ConfigParser
@@ -13,7 +12,9 @@ from logging import Formatter
 import json
 import pickle
 import matplotlib.pyplot as plt
-
+from binance import Client
+import dotenv
+import os
 
 # logger setup
 logger = logging.getLogger("main")
@@ -35,12 +36,11 @@ class Bot:
         self.env_path = env_path
         self.config = ConfigParser()
         self.read_config()
-        # ftx client setup
+        # bnb client setup
         dotenv.load_dotenv(self.env_path)
         api_key = os.environ.get("API_KEY")
         secret_key = os.environ.get("SECRET_KEY")
-        self.ftx_client = FtxClient(api_key,
-                                    secret_key, self.sub_account)
+        self.bnb_client = Client(api_key, secret_key)
 
         # symbol variables
         self.base_symbol = self.market_symbol.split('/')[0]
@@ -48,23 +48,18 @@ class Bot:
 
         # init price
         # check exhange pair and price
-        self.market_info = self.ftx_client.get_single_market(
-            self.market_symbol)
-        if self.market_info['enabled'] == False:
-            raise Exception("FTX suspended trading!")
-        self.init_price = self.market_info['price']
+        self.init_price = float(self.bnb_client.get_avg_price(
+            symbol="{}{}".format(self.base_symbol, self.quote_symbol))['price'])
 
         # calculate init nav
-        if self.init_nav <= 0:
-            self.base_balance = self.ftx_client.get_balance_specific(
-                self.base_symbol)
-            self.quote_balance = self.ftx_client.get_balance_specific(
-                self.quote_symbol)
-            self.init_nav = float(0 if not self.base_balance else self.base_balance['usdValue']) + float(
-                0 if not self.quote_balance else self.quote_balance['usdValue'])
-            self.config['main']['init_nav'] = str(self.init_nav)
-            with open(self.conf_path, 'w') as configfile:    # save
-                self.config.write(configfile)
+        if float(
+            self.bnb_client.get_asset_balance(asset=self.base_symbol)['free']) < self.init_base_balance or float(
+                self.bnb_client.get_asset_balance(asset=self.quote_symbol)['free']) < self.init_quote_balance:
+            raise Exception("insufficient funds")
+        self.base_balance = self.init_base_balance
+        self.quote_balance = self.init_quote_balance
+        self.init_nav = (self.init_price*self.init_base_balance) + \
+            self.init_quote_balance
 
         # last rb vars
         self.last_rb_price = -1
@@ -76,8 +71,10 @@ class Bot:
         self.config.read(self.conf_path)
         # main
         self.market_symbol = self.config['main']['market_symbol']
-        self.sub_account = self.config["main"]['sub_account']
-        self.init_nav = float(self.config['main']['init_nav'])
+        self.init_base_balance = float(
+            self.config['main']['init_base_balance'])
+        self.init_quote_balance = float(
+            self.config['main']['init_quote_balance'])
         # rb conditions
         self.trig_price_chg_thresh = float(
             self.config["rb"]['trig_price_chg_thresh'])
@@ -94,24 +91,14 @@ class Bot:
     def update_stats(self):
         # datetime
         self.datetime = datetime.datetime.now()
-        # check exhange pair and price
-        self.market_info = self.ftx_client.get_single_market(
-            self.market_symbol)
-        if self.market_info['enabled'] == False:
-            raise Exception("FTX suspended trading!")
         # check price
-        self.price = self.market_info['price']
+        self.price = float(self.bnb_client.get_avg_price(
+            symbol="{}{}".format(self.base_symbol, self.quote_symbol))['price'])
         self.price_chg_pct = round(
             ((self.price-self.init_price)/self.init_price)*100, 2)
         # calculate stats
-        self.base_balance = self.ftx_client.get_balance_specific(
-            self.base_symbol)
-        self.quote_balance = self.ftx_client.get_balance_specific(
-            self.quote_symbol)
-        self.base_balance_value = float(
-            0 if not self.base_balance else self.base_balance['usdValue'])
-        self.quote_balance_value = float(
-            0 if not self.quote_balance else self.quote_balance['usdValue'])
+        self.base_balance_value = self.base_balance*self.price
+        self.quote_balance_value = self.quote_balance #usd
         self.nav = self.base_balance_value + self.quote_balance_value
         self.base_balance_value_ratio = self.base_balance_value/self.nav
         self.base_balance_value_ratio_pct = round(
@@ -127,14 +114,11 @@ class Bot:
         print("--------------------")
         print("[CONFIG]")
         print("market_symbol:", self.market_symbol)
-        print("sub_account:", self.sub_account)
         print("-------------------")
         print("[STATUS]")
         print("{}: {}".format(self.market_symbol, self.price))
-        print(self.base_symbol+"_balance: " +
-              str(round(float(0 if not self.base_balance else self.base_balance['free']), 4)))
-        print(self.quote_symbol+"_balance: " +
-              str(round(float(0 if not self.quote_balance else self.quote_balance['free']), 2)))
+        print(self.base_symbol+"_balance: " + str(round(self.base_balance, 4)))
+        print(self.quote_symbol+"_balance: " + str(round(self.quote_balance, 4)))
         print("{}_ratio: {}%".format(self.base_symbol,
               self.base_balance_value_ratio_pct))
         print("price_chg: "+str(self.price_chg_pct)+"%")
@@ -150,7 +134,7 @@ class Bot:
     def save_instance(self):
         # json
         instance = dict(self.__dict__)  # make copy of dict
-        instance['ftx_client'] = str(instance['ftx_client'])
+        instance['bnb_client'] = str(instance['bnb_client'])
         instance['datetime'] = self.datetime.strftime("%d/%m/%Y %H:%M:%S")
         instance['config'] = self.config._sections
         with open("./public/instance.json", "w") as file_json:
@@ -234,15 +218,27 @@ class Bot:
                     traded = False
                     if self.base_balance_value_ratio > rsi_base_ratio:
                         # sell
-                        traded = instant_limit_order(
-                            self.ftx_client, self.market_symbol, "sell", trade_unit)
+                        order = self.bnb_client.order_market_sell(
+                            symbol="{}{}".format(
+                                self.base_symbol, self.quote_symbol),
+                            quantity=trade_unit)
+                        traded = True if order['status'] == 'FILLED' else False
+                        if traded:
+                            self.base_balance -= float(order['fills'][0]['qty'])
+                            self.quote_balance += trade_unit*self.price
 
                         logger.info("sold {} {}".format(
                             trade_unit, self.base_symbol))
                     elif self.base_balance_value_ratio < rsi_base_ratio:
                         # buy
-                        traded = instant_limit_order(
-                            self.ftx_client, self.market_symbol, "buy", trade_unit)
+                        order = self.bnb_client.order_market_buy(
+                            symbol="{}{}".format(
+                                self.base_symbol, self.quote_symbol),
+                            quantity=trade_unit)
+                        traded = True if order['status'] == 'FILLED' else False
+                        if traded:
+                            self.base_balance += float(order['fills'][0]['qty'])
+                            self.quote_balance -= trade_unit*self.price
 
                         logger.info("brought {} {}".format(
                             trade_unit, self.base_symbol))
@@ -250,7 +246,6 @@ class Bot:
                     # check traded
                     if traded:
                         logger.info("traded")
-
                         # update last_rb_price
                         self.last_rb_price = self.price
                         # re tick

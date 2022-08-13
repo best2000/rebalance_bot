@@ -10,7 +10,7 @@ dotenv.load_dotenv('.env')
 apiKey = os.environ.get("API_KEY")
 secret = os.environ.get("SECRET_KEY")
 
-exchange = ccxt.ftx(
+exchange = ccxt.binance(
     {'apiKey': apiKey, 'secret': secret, 'enableRateLimit': True})
 
 
