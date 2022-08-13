@@ -37,8 +37,8 @@ class Bot:
         self.read_config()
         # ftx client setup
         dotenv.load_dotenv(self.env_path)
-        api_key = os.environ.get("API_FTX")
-        secret_key = os.environ.get("SECRET_FTX")
+        api_key = os.environ.get("API_KEY")
+        secret_key = os.environ.get("SECRET_KEY")
         self.ftx_client = FtxClient(api_key,
                                     secret_key, self.sub_account)
 

@@ -1,7 +1,7 @@
 FROM python:3.10.4-slim
 
-ENV API_FTX=???
-ENV SECRET_FTX=???
+ENV API_KEY=???
+ENV SECRET_KEY=???
 
 WORKDIR /app
 
